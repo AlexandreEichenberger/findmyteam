@@ -1,7 +1,14 @@
 from django.db import models
+from django.core.exceptions import ValidationError
+from django.utils.translation import ugettext_lazy as _
 
+# create custom validation
+
+def validate_first_program(value):
+    if value == Team.UNSPECIFIED:
+        raise ValidationError("failed to define a first program")
+    
 # Create your models here.
-from django.db import models
 
 class Team(models.Model):
     UNSPECIFIED = '-'
@@ -21,6 +28,7 @@ class Team(models.Model):
         max_length=1,
         choices=FIRST_PROGRAM,
         default=UNSPECIFIED,
+        validators=[validate_first_program]
     )
     username = models.CharField(max_length=200)
     team_name = models.CharField(max_length=200, help_text="Enter the name of your team.")
@@ -39,13 +47,18 @@ class Team(models.Model):
     prospective_team_profile = models.CharField(max_length=200, blank=True, null=True, help_text="Optional description of the profile of prospective teams that you are interested in mentoring.")
     looking_for_mentorship = models.BooleanField(default=False, help_text="Select if you are interested being mentored by another team. Only then will you receive message from prospective expert teams.")
     help_request = models.CharField(max_length=200, blank=True, null=True, help_text="Optional description of the expertise you would like to get help with.")
-
     # stats
     first_update = models.DateField(auto_now_add=True)
     last_update = models.DateField(auto_now=True)
-    update_count = models.PositiveIntegerField(editable=False)
-    looking_request_count = models.PositiveIntegerField(editable=False)
-    requested_count = models.PositiveIntegerField(editable=False)
+    update_count = models.PositiveIntegerField(default=0, editable=False)
+    looking_request_count = models.PositiveIntegerField(default=0, editable=False)
+    requested_count = models.PositiveIntegerField(default=0, editable=False)
+    #methods
+    def __str__(self):
+        if self.team_number:
+            return "%s-%d %s" %(self.first_program, self.team_number, self.team_name)
+        else:
+            return "%s %s" %(self.first_program, self.team_name)
 
 class Person(models.Model):
     # info about person
@@ -68,3 +81,5 @@ class Person(models.Model):
     update_count = models.PositiveIntegerField(editable=False)
     looking_request_count = models.PositiveIntegerField(editable=False)
     requested_count = models.PositiveIntegerField(editable=False)
+    def __str__(self):
+        return self.child_name
