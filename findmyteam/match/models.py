@@ -228,7 +228,6 @@ class Person(models.Model):
         if self.interested_in_jFLL or self.interested_in_FLL or self.interested_in_FTC or self.interested_in_FRC:
             str = positive_pre_sentence + " "
             str += display_or_list([[self.interested_in_jFLL, "junior FLL"], [self.interested_in_FLL, "FLL"], [self.interested_in_FTC, "FTC"], [self.interested_in_FRC, "FRC"]])
-            str += " team"
             return str + " team"
         else:
             return negative_pre_sentence
