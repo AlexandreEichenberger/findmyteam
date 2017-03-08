@@ -10,7 +10,11 @@ def index(request):
 def team_detail(request, username):
     #return HttpResponse("You are looking at team %s. " % username)
     team = get_object_or_404(Team, username=username)
-    return render(request, 'match/team_detail.html', {'team' : team})
+    return render(request, 'match/team_detail.html', {'description' : team.team_description() + team.team_needs()})
 
- 
+def person_detail(request, username):
+    #return HttpResponse("You are looking at team %s. " % username)
+    person = get_object_or_404(Person, username=username)
+    return render(request, 'match/person_detail.html', {'description' : person.child_description()})
+
 
