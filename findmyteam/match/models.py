@@ -176,7 +176,6 @@ class Team(models.Model):
             str += ".  "
         else:
             str += "not currently looking for new teammates or mentoring opportunities.  "
-        str += "Distance from Chappaqua is %d.  " % self.distance_from(41.1693588, -73.78308609999998)
         return str
     
     def update_zip_info(self):
@@ -225,15 +224,18 @@ class Person(models.Model):
     def __str__(self):
         return self.child_name
 
+    def child_team_interest(self, positive_pre_sentence, negative_pre_sentence):
+        if self.interested_in_jFLL or self.interested_in_FLL or self.interested_in_FTC or self.interested_in_FRC:
+            str = positive_pre_sentence + " "
+            str += display_or_list([[self.interested_in_jFLL, "junior FLL"], [self.interested_in_FLL, "FLL"], [self.interested_in_FTC, "FTC"], [self.interested_in_FRC, "FRC"]])
+            str += " team"
+            return str + " team"
+        else:
+            return negative_pre_sentence
+    
     def child_description(self):
         self.update_zip_info()        
-        str = "A child from %s, %s, is " % (self.town_name, self.state_name)
-        if self.interested_in_jFLL or self.interested_in_FLL or self.interested_in_FTC or self.interested_in_FRC:
-            str += "looking for a "
-            str += display_or_list([[self.interested_in_jFLL, "junior FLL"], [self.interested_in_FLL, "FLL"], [self.interested_in_FTC, "FTC"], [self.interested_in_FRC, "FRC"]])
-            str += " team. "
-        else:
-            str += "not currently looking for a team.  "
+        str = "A child from %s, %s, is %s.  " % (self.town_name, self.state_name, self.child_team_interest("looking for a", "not currently looking for a"))
         str += "The child lives in the %s school district and has %d %s of FIRST experience. " % (self.school_district_name, self.years_of_FIRST_experience, display_pluralized(self.years_of_FIRST_experience, "year"))
         return str
     
