@@ -1,0 +1,15 @@
+<h1>
+You have indicated that {{ person.child_name }} is {{ team_interest }}.
+</h1>
+
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+<form action={% url 'match:person_searching_result' person.username %}
+method="post" \>
+{% csrf_token %}
+
+Distance from home:
+<input type="number" name="distance" value={{dist}} />
+<br />
+<input type="submit" value="Submit" />
+</form>

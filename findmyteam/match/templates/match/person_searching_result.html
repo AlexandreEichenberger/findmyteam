@@ -1,0 +1,25 @@
+<h1>
+You have indicated that {{ person.child_name }} is {{ team_interest }}
+within {{dist}} miles from home.
+</h1>
+
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+<form action={% url 'match:person_searching_result' person.username %}
+method="post" \>
+{% csrf_token %}
+
+Refine distance from home:
+<input type="number" name="distance" value={{dist}} />
+<br />
+<input type="submit" value="Submit" />
+</form>
+
+<h2>
+Teams found:
+</h2>
+{% for team in team_set %}
+<li> {{ team.team_description }}
+<a href="{% url 'match:team_detail' team.username %}"> Learn more. </a> </li>
+{% endfor %}
+  
