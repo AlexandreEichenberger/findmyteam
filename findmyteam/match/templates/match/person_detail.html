@@ -1,3 +1,21 @@
+<h2>
+Person Info
+</h2>
 <ul>
-    {{ description }}
-  </ul>
+{{ person.child_description }}
+</ul>
+
+<h2>
+Interests
+</h2>
+<ul>
+{{ person.child_interest }}
+</ul>
+
+{% if inviting_team %}
+  <h3>
+  Interested?
+  </h3>
+  <a href="{% url 'match:team_invite_person' inviting_team.username person.username %}> 
+  Ask if prospective teammate is also interested. </a>
+{% endif %} 

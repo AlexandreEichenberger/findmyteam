@@ -1,25 +1,28 @@
 <h2>
-TeamInfo:
+TeamInfo
 </h2>
 <ul>
-  {{ team.team_description}}
+{{ team.team_description}}
 </ul>
-  {%if team.web_site %}
-    <ul>
-      <a href="{{team.web_site}}"> External website </a>
-  {% endif %}
-  <h2>
-  Team Description:
-  </h2>
+
+{%if team.web_site %}
   <ul>
-    {{ team.description}}
+    <a href="{{team.web_site}}"> External website </a>
   </ul>
+{% endif %}
+
+<h2>
+Team Description
+</h2>
+<ul>
+  {{ team.description}}
+</ul>
   
-  <h2>
-  Team Achievements:
-  </h2>
-  <ul>
-    {{ team.achievement}}
-  </ul>
+<h2>
+Team Achievements
+</h2>
+<ul>
+  {{ team.achievement}}
+</ul>
   
   

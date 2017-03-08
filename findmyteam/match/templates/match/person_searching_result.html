@@ -12,13 +12,13 @@ Refine distance from home:
 <input type="submit" value="Submit" />
 </form>
 
-{% if team_size == 0 %}
+{% if team_list_size == 0 %}
   <h2>
   No teams were found; please consider expanding your search radius.
   </h2>
 {% else %}
   <h2>
-  Team{{team_size|pluralize}} found:
+  Team{{team_list_size|pluralize}} found:
   </h2>
   {% for team in team_list %}
     <li> {{ team.team_description }}

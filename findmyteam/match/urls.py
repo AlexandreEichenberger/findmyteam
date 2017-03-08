@@ -11,5 +11,7 @@ urlpatterns = [
     url(r'^(?P<username>[a-zA-Z_]+)/person_detail/$', views.person_detail, name='person_detail'),
     url(r'^(?P<username>[a-zA-Z_]+)/person_searching/$', views.person_searching, name='person_searching'),
     url(r'^(?P<username>[a-zA-Z_]+)/person_searching_result/$', views.person_searching_result, name='person_searching_result'),
+    url(r'^(?P<username>[a-zA-Z_]+)/team_searching_person/$', views.team_searching_person, name='team_searching_person'),
+    url(r'^(?P<username>[a-zA-Z_]+)/team_searching_person_result/$', views.team_searching_person_result, name='team_searching_person_result'),
 
 ]
