@@ -3,7 +3,7 @@ You have indicated that {{ person.child_name }} is {{ team_interest }}
 within {{dist}} miles from home.
 </h1>
 
-<form action={% url 'match:person_searching_result' person.username %}
+<form action={% url 'match:person_searching_team_result' person.username %}
 method="post" \>
 {% csrf_token %}
 
@@ -18,10 +18,10 @@ Refine distance from home:
   </h2>
 {% else %}
   <h2>
-  Team{{team_list_size|pluralize}} found:
+  Nearby prospective team{{team_list_size|pluralize}}:
   </h2>
-  {% for team in team_list %}
-    <li> {{ team.team_description }}
-    <a href="{% url 'match:team_detail' team.username %}"> Learn more. </a> </li>
+  {% for prospective_team in team_list %}
+    <li> {{ prospective_team.team_description }}
+    <a href="{% url 'match:person_viewing_team' person.username prospective_team.username %}"> Learn more. </a> </li>
   {% endfor %}
 {% endif %}  

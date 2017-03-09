@@ -7,6 +7,10 @@ from dateutil.relativedelta import relativedelta
 import datetime
 from math import radians, cos, sin, asin, sqrt
 
+# globals
+invite_expiration_in_days = 7
+max_initiated_invite = 20
+
 # print help
 
 # [[pred, name], ...]
@@ -118,8 +122,8 @@ class Team(models.Model):
     school_district_name = models.CharField(max_length=200, blank=True, null=True, help_text="Enter the name of your school district if your team is a school-based team. Otherwise, leave the field blank.")
     zip_code = models.PositiveSmallIntegerField(validators=[validate_zip_code], help_text="5 digit ZIP code of where you meet.")
     year_founded = models.PositiveSmallIntegerField(blank=True, null=True, help_text="Enter the year that your team was founded. Leave field blank for prospective teams.")
-    description = models.TextField(max_length=2000, help_text="Enter a brief team's description and include your team's objectives.")
-    achievement = models.TextField(max_length=1000, help_text="Describe your recent achievements.")
+    description = models.TextField(max_length=2000, help_text="Enter a brief team's description and include your team's objectives. Write description to read as a paragraph.")
+    achievement = models.TextField(max_length=1000, help_text="Describe your recent achievements. Write description to read as a paragraph.")
     web_site = models.URLField(max_length=200, blank=True, null=True, help_text="Enter the URL of your team online presence.")
     # what is the team looking for
     looking_for_teammate = models.BooleanField(default=True, help_text="Select if you are actively looking for new teammates. Only then will you receive messages from prospective team members.")
@@ -201,7 +205,7 @@ class Person(models.Model):
     username = models.CharField(max_length=200)
     guardian_name = models.CharField(max_length=200, help_text="Enter the name of the child's guardian.")
     child_name = models.CharField(max_length=200, help_text="Enter the name of the child that you are looking a team for.")
-    child_interest = models.TextField(max_length=1000, help_text="Enter your child's interest and relevant experience.")
+    child_interest = models.TextField(max_length=1000, help_text="Enter your child's interest and relevant experience. Write description to read as a paragraph.")
     school_district_name = models.CharField(max_length=200, help_text="Enter the name of your child's school district. Some school-based teams are restricted to children in the district.")
     zip_code = models.PositiveSmallIntegerField(validators=[validate_zip_code], help_text="5 digit ZIP code of where you live.")
     years_of_FIRST_experience = models.PositiveSmallIntegerField(default=0, help_text="Enter the number of seasons that your child has participated in FIRST programs.")
@@ -241,7 +245,11 @@ class Person(models.Model):
     def child_description(self):
         self.update_zip_info()        
         str = "A child from %s, %s, is %s.  " % (self.town_name, self.state_name, self.child_team_interest_description("looking for a", "not currently looking for a"))
-        str += "The child lives in the %s school district and has %d %s of FIRST experience. " % (self.school_district_name, self.years_of_FIRST_experience, display_pluralized(self.years_of_FIRST_experience, "year"))
+        str += "The child lives in the %s school district" % self.school_district_name
+        if self.years_of_FIRST_experience > 0:
+            str += " and has %d %s of FIRST experience. " % (self.years_of_FIRST_experience, display_pluralized(self.years_of_FIRST_experience, "year"))
+        else:
+            str += ".  "
         return str
     
     def update_zip_info(self):
@@ -257,3 +265,80 @@ class Person(models.Model):
     def distance_from(self, other_latitude, other_longitude):
         self.update_zip_info()
         return great_circle([self.latitude, self.longitude], [other_latitude, other_longitude])
+
+################################################################################
+
+class Invite(models.Model):
+    # info about person
+    invitor_username = models.CharField(max_length=200)
+    prospective_username = models.CharField(max_length=200)
+    date = models.DateField(auto_now_add=True)
+    P2T = 'P'
+    T2P = 'T'
+    T2M = 'H'
+    M2T = 'M'
+    INVITE_TYPE = (
+        (P2T, 'person to team'),
+        (T2P, 'team to person'),
+        (T2M, 'new team to mentor team'),
+        (M2T, 'mentor team to new team'),
+    )
+    # invite type
+    type = models.CharField(max_length=1, choices=INVITE_TYPE, default=P2T)
+    INITIATED = 'I'
+    ACCEPTED = 'A'
+    DECLINED = 'D'
+    OLD_DECLINED = 'O'
+    EXPIRED = 'E'
+
+    STATUS = (
+        (INITIATED, 'initiated'),
+        (ACCEPTED, 'accepted'),
+        (DECLINED, 'declined'),
+        (OLD_DECLINED, 'declined that has now expired'),
+        (EXPIRED, 'expired'),
+    )
+    # invite status
+    status = models.CharField(max_length=1, choices=STATUS, default=INITIATED)
+    # methods
+    
+    @classmethod
+    def create(cls, invitor_username, prospective_username, type):
+        invite = cls(invitor_username=invitor_username, prospective_username=prospective_username, type=type)
+        print(invite)
+        return invite
+
+    @classmethod
+    def find_pending_invite(cls, invitor_username, prospective_username, type):
+        # does same invite already exists?
+        qs = cls.objects.filter(invitor_username=invitor_username, prospective_username=prospective_username, type=type)
+        for i in qs:
+            # ignore completed requests
+            if not i.completed():
+                return i
+        return None
+
+    # invite offers exired after a number of days
+    def expired(self, factor):
+        delta = datetime.today - self.date
+        if delta.in_days > factor * invite_expiration_in_days:
+            return True
+        return False
+    
+    # completed if accepted / declined / expired. Check conditions for expired
+    def completed(self):
+        # check new expired
+        if self.status == INITIATED and self.expired(1):
+            self.status = self.EXPIRED
+            self.save()
+        if self.status == DECLINED and self.expired(2):
+            self.status = self.OLD_DECLINED
+            self.save()
+        if self.status == self.ACCEPTED or self.status == self.OLD_DECLINED or self.status == self.EXPIRED:
+            return True
+        return False
+
+
+        
+
+    

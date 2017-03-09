@@ -17,10 +17,10 @@ Refine distance from meeting place:
   </h2>
 {% else %}
   <h2>
-  Person{{person_list_size|pluralize}} found:
+  Nearby prospective teammate {{person_list_size|pluralize}}:
   </h2>
-  {% for person in person_list %}
-    <li> {{person.child_description }}
-    <a href="{% url 'match:person_detail' person.username %}"> Learn more. </a> </li>
+  {% for prospective_person in person_list %}
+    <li> {{prospective_person.child_description }}
+    <a href="{% url 'match:team_viewing_person' team.username prospective_person.username %}"> Learn more. </a> </li>
   {% endfor %}
 {% endif %}  

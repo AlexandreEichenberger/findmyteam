@@ -1,0 +1,36 @@
+<h2>
+TeamInfo
+</h2>
+<ul>
+{{ prospective_team.team_description}}
+</ul>
+
+{%if prospective_team.web_site %}
+  <ul>
+    <a href="{{prospective_team.web_site}}"> External website </a>
+  </ul>
+{% endif %}
+
+<h2>
+Team Description
+</h2>
+<ul>
+  {{ prospective_team.description}}
+</ul>
+  
+<h2>
+Team Achievements
+</h2>
+<ul>
+  {{ prospective_team.achievement}}
+</ul>
+  
+{% if prospective_team %}
+  <h3>
+  Interested?
+  </h3>
+  <ul>
+  <a href="{% url 'match:person_inviting_team' person.username prospective_team.username %}"> 
+    Ask if prospective team is also interested. </a>
+  </ul>  
+{% endif %} 

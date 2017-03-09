@@ -1,0 +1,31 @@
+<h1> Invitation </h1>
+
+<ul>
+  {{greeting}} 
+</ul>
+<ul>
+  {{par1}} 
+</ul>
+<ul>
+  {{par2}} 
+</ul>
+{%if par3 %}
+  <ul>
+    {{par3}} 
+  </ul>
+{% endif %}
+<ul>  
+<form action={% url 'match:send_invite' invitor invitee type %} method="post" \>
+  {% csrf_token %}
+  Concluding message (optional): <br>
+  <input type="hidden" name="greeting" value="{{greeting}}">
+  <input type="hidden" name="par1" value="{{par1}}">
+  <input type="hidden" name="par2" value="{{par2}}">
+  <input type="hidden" name="par3" value="{{par3}}">
+  <input type="text"   name="message" maxlength=2000 size=120><br>
+  <br><br>
+  Looking forward to hearing from you. 
+  <br><br>
+  <input type="submit" value="Submit" />
+</form>
+</ul>
