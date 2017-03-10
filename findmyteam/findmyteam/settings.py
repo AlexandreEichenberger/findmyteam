@@ -151,7 +151,12 @@ ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_USE_TLS = True
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_HOST_USER = 'findmyteammember@gmail.com' 
-EMAIL_HOST_PASSWORD = 'Roa17abot'
+EMAIL_HOST_USER = 'findmyteammember@gmail.com'
+try:
+  EMAIL_HOST_PASSWORD = os.environ['ROBO_MAIL_INFO']
+except:
+  print("You must define email password: export ROBO_MAIL_INFO = \"password\"")
+  raise
+
 EMAIL_PORT = 587
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
