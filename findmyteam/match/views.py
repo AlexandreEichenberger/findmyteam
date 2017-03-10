@@ -18,10 +18,13 @@ max_travel_distance = 200
 ################################################################################
 # person
 
-def person_viewing_team(request, pusername, tusername):
-    person = get_object_or_404(Person, username=pusername)
+def person_viewing_team(request, tusername):
     prospective_team = get_object_or_404(Team, username=tusername)
-    return render(request, 'match/person_viewing_team.html', {'person' : person, 'prospective_team' : prospective_team})
+    context = { 'prospective_team' : prospective_team }
+    if request.user.is_authenticated:
+        pusername = request.user.username
+        context['person'] = get_object_or_404(Person, username=pusername)
+    return render(request, 'match/person_viewing_team.html', context)
 
 def person_inviting_team(request, pusername, tusername):
     person = get_object_or_404(Person, username=pusername)
@@ -63,13 +66,17 @@ def render_team_list_for_person(request, person, dist):
         'team_list': team_list_by_dist})
 
 
-def person_searching(request, pusername):
-    person = get_object_or_404(Person, username=pusername)
+def person_searching(request):
+    person = None
+    if request.user.is_authenticated():
+        person = get_object_or_404(Person, username=request.user.username)
     dist = 15
     return render_team_list_for_person(request, person, dist)    
 
-def person_searching_result(request, pusername):
-    person = get_object_or_404(Person, username=pusername)
+def person_searching_result(request):
+    person = None
+    if request.user.is_authenticated():
+        person = get_object_or_404(Person, username=pusername)
     # get and normalize dist
     dist = int(request.POST['distance'])
     if dist == None:
