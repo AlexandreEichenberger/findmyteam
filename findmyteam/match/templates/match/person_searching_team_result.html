@@ -1,3 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+
 <h1>
 You have indicated that {{ person.child_name }} is {{ team_interest }}
 within {{dist}} miles from home.
@@ -25,3 +28,5 @@ Refine distance from home:
     <a href="{% url 'match:person_viewing_team' person.username prospective_team.username %}"> Learn more. </a> </li>
   {% endfor %}
 {% endif %}  
+
+{% endblock %}

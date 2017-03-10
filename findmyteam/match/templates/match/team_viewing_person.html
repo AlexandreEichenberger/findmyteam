@@ -1,3 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+
 <h2>
 Person Info
 </h2>
@@ -18,4 +21,6 @@ Interests
   </h3>
   <a href="{% url 'match:team_inviting_person' team.username prospective_person.username %}"> 
   Ask if prospective teammate is also interested. </a>
-{% endif %} 
+{% endif %}
+
+{% endblock %}

@@ -37,6 +37,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+#    'allauth.socialaccount.providers.facebook',
+#    'allauth.socialaccount.providers.google',
+#    'allauth.socialaccount.providers.github',
 ]
 
 MIDDLEWARE = [
@@ -62,6 +69,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.request',
             ],
         },
     },
@@ -120,4 +128,30 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # django authentication
-ACCOUNT_ACTIVATION_DAYS = 7 
+AUTHENTICATION_BACKENDS = (
+    # Needed to login by username in Django admin, regardless of `allauth`
+    'django.contrib.auth.backends.ModelBackend',
+    # `allauth` specific authentication methods, such as login by e-mail
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
+# ids are not found on the interface;
+# python manage.py shell
+#   from django.contrib.sites.models import Site
+#   s=Site.objects.get(name='127.0.0.1:8000')
+#   s.id
+# put that id below
+SITE_ID = "3"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_SIGNUP_EMAIL_ENTER_TWICE = True
+ACCOUNT_USERNAME_MIN_LENGTH = 3
+LOGIN_REDIRECT_URL = '/match/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_USE_TLS = True
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST_USER = 'findmyteammember@gmail.com' 
+EMAIL_HOST_PASSWORD = 'Roa17abot'
+EMAIL_PORT = 587
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

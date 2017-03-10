@@ -1,14 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+
 <h1>
 Team {{ team.team_number_description }} is interested in new team
 members within {{dist}} miles from your meeting place.
 </h1>
 
 <form action={% url 'match:team_searching_person_result' team.username %}
-method="post" \>
+method="post">
 {% csrf_token %}
 Refine distance from meeting place:
-<input type="number" name="distance" value={{dist}} />
-<input type="submit" value="Submit" />
+<input type="number" name="distance" value={{dist}}>
+<input type="submit" value="Submit">
 </form>
 
 {% if person_list_size == 0 %}
@@ -23,4 +26,6 @@ Refine distance from meeting place:
     <li> {{prospective_person.child_description }}
     <a href="{% url 'match:team_viewing_person' team.username prospective_person.username %}"> Learn more. </a> </li>
   {% endfor %}
-{% endif %}  
+{% endif %}
+    
+{% endblock %}

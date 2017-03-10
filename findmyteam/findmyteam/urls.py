@@ -20,6 +20,6 @@ from django.contrib import admin
 urlpatterns = [
     url(r'^match/', include('match.urls')),
     url(r'^admin/', admin.site.urls),
-    url(r'^accounts/', include('registration.backends.hmac.urls')),
+    url(r'^accounts/', include('allauth.urls')),
 ]
 
