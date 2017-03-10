@@ -4,8 +4,14 @@ from django.http import HttpResponse
 # Create your views here.
 from .models import Team, Person, Invite
 
+################################################################################
+# general
+
 def index(request):
-    return HttpResponse("Hello, world. You're at find my team page.")
+    return render(request, 'match/index.html', {})
+
+def settings(request):
+    return render(request, 'match/settings.html', {})
 
 max_travel_distance = 200
 

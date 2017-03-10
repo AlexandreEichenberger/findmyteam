@@ -6,6 +6,20 @@
 <html>
 <head>
 Find My Team
+<nav>
+<ul>
+  <li>
+    {% if user.is_authenticated %}
+      Hi {{ user.username }},
+      <a id="settings" href="{% url 'match:settings' %}"> settings</a>,
+      <a id="logout" href="/accounts/logout"> logout </a>
+    {% else %}
+      <a id="login" href="/accounts/login"> login </a>,
+      <a id="signup" href="/accounts/signup"> signup </a>
+    {% endif %}
+  </li>
+</ul>
+</nav>
 </head>
 
 <body>

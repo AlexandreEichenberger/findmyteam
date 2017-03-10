@@ -148,6 +148,7 @@ ACCOUNT_USERNAME_MIN_LENGTH = 3
 LOGIN_REDIRECT_URL = '/match/'
 ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
 
+# handle email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_USE_TLS = True
 EMAIL_HOST = 'smtp.gmail.com'
@@ -157,6 +158,5 @@ try:
 except:
   print("You must define email password: export ROBO_MAIL_INFO = \"password\"")
   raise
-
 EMAIL_PORT = 587
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
