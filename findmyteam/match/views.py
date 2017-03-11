@@ -134,7 +134,7 @@ def render_person_searching_teams(request, zipcode, dist, latitude, longitude,
                 team_list.append(t)
                 dist_list.append(d)
         # sort list by distance
-        team_list_by_dist = [x for (y,x) in sorted(zip(dist_list, team_list))]
+        team_list_by_dist = [x for (y,x) in sorted(zip(dist_list, team_list), key=lambda pair: pair[0])]
     # has team list / or empty
     return render(request, 'match/person_searching_teams_result.html', {
         'zipcode' : zipcode, 'dist' : dist,
@@ -297,7 +297,7 @@ def render_team_searching_persons(request, team, dist, error_message):
             person_list.append(p)
             dist_list.append(d)
     # sort list by distance
-    person_list_by_dist = [x for (y,x) in sorted(zip(dist_list, person_list))]
+    person_list_by_dist = [x for (y,x) in sorted(zip(dist_list, person_list), key=lambda pair: pair[0])]
     list_results = True
     if error_message:
         list_results = False

@@ -132,13 +132,12 @@ class Person(models.Model):
     update_count = models.PositiveIntegerField(default=0)
     looking_request_count = models.PositiveIntegerField(default=0)
     requested_count = models.PositiveIntegerField(default=0)
-    #local data
-    initialized = False
-    zip_code_cached = 0
-    town_name = ""
-    state_name = ""
-    latitude = 0.0
-    longitude = 0.0
+    #cached data
+    zip_code_cached = models.PositiveSmallIntegerField(default=0)
+    town_name = models.CharField(max_length=50, default="")
+    state_name = models.CharField(max_length=2, default="")
+    latitude = models.FloatField(default=0.0)
+    longitude = models.FloatField(default=0.0)
     
     # methods
     def __str__(self):
@@ -166,9 +165,9 @@ class Person(models.Model):
         return str
     
     def update_zip_info(self):
-        zipcode_search_engine = ZipcodeSearchEngine()
         if self.zip_code_cached != self.zip_code:
             self.zip_code_cached = self.zip_code
+            zipcode_search_engine = ZipcodeSearchEngine()
             info = zipcode_search_engine.by_zipcode(self.zip_code)
             self.town_name = info.City
             self.state_name = info.State
@@ -232,13 +231,12 @@ class Team(models.Model):
     update_count = models.PositiveIntegerField(default=0)
     looking_request_count = models.PositiveIntegerField(default=0)
     requested_count = models.PositiveIntegerField(default=0)
-    #local data
-    initialized = False
-    zip_code_cached = 0
-    town_name = ""
-    state_name = ""
-    latitude = 0.0
-    longitude = 0.0
+    #cached data
+    zip_code_cached = models.PositiveSmallIntegerField(default=0)
+    town_name = models.CharField(max_length=50, default="")
+    state_name = models.CharField(max_length=2, default="")
+    latitude = models.FloatField(default=0.0)
+    longitude = models.FloatField(default=0.0)
     #methods
     def __str__(self):
         return "%s-%s-%s" %(self.username, self.team_number_description(), self.team_name)
@@ -280,9 +278,9 @@ class Team(models.Model):
         return str
     
     def update_zip_info(self):
-        zipcode_search_engine = ZipcodeSearchEngine()
         if self.zip_code_cached != self.zip_code:
             self.zip_code_cached = self.zip_code
+            zipcode_search_engine = ZipcodeSearchEngine()
             info = zipcode_search_engine.by_zipcode(self.zip_code)
             self.town_name = info.City
             self.state_name = info.State
