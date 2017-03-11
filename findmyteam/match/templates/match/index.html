@@ -2,10 +2,19 @@
 {% block content %}
 
 
+{% if message %}
 <h2>
-Hi
+{{ header }}
+</h2>
+<ul> {{ message }} </ul> <br>
+{% endif %}
+
+<h2>
+Actions
 </h2>
 
+<li> <a href="{% url 'match:person_searching_teams' %}">Search teams.</a></li>
+<li> <a href="{% url 'match:team_searching_persons' %}">Search people.</a></li>
 
 
 {% endblock %}

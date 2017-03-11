@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if list_results %}
+  {% if person_list_size == 0 %}
+    <h2>
+    No prospective teammates were found; please expand your search terms.
+    </h2>
+  {% else %}
+    <h2>
+    Nearby prospective teammate{{person_list_size|pluralize}}:
+    </h2>
+    {% for prospective_person in person_list %}
+      <li> {{prospective_person.child_description }}
+      <a href="{% url 'match:team_viewing_person' prospective_person.username %}">Learn more.</a>
+      </li>
+    {% endfor %}
+  {% endif %}
+{% endif %}  
+
+<h2>
+Search Terms:
+</h2>
+
+{% if error_message %} <ul> {{ error_message }} </ul>  {% endif %}    
+
+<form action={% url 'match:team_searching_persons_result'%} method="post">
+  {% csrf_token %}
+
+<li> distance <input type="number" name="distance" value={{dist}}> </li>
+
+<input type="submit" value="Submit">
+</form>
+
+{% endblock %}

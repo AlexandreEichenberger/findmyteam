@@ -27,15 +27,18 @@ Team Achievements
 <ul>
   {{ prospective_team.achievement}}
 </ul>
-  
-{% if person %}
-  <h3>
+
+{% if can_invite %}
+<h3>
   Interested?
-  </h3>
-  <ul>
-  <a href="{% url 'match:person_inviting_team' person.username prospective_team.username %}"> 
-    Ask if prospective team is also interested. </a>
-  </ul>  
+</h3>
+<ul>
+  <a href="{% url 'match:person_inviting_team' prospective_team.username %}">Ask if prospective team is also interested.</a>
+</ul>  
+{% endif %}
+
+{% if too_many_invite %}
+<ul> too_many_invite </ul>
 {% endif %}
 
 {% endblock %}

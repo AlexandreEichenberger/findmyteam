@@ -1,7 +1,12 @@
 from django.db import models
 from django.db.models import DEFERRED
+from django.db.models.signals import post_save
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
+from django.contrib.auth.models import User
+from django.dispatch import receiver
+from django.forms import ModelForm
+
 from uszipcode import ZipcodeSearchEngine
 from dateutil.relativedelta import relativedelta
 import datetime
@@ -13,8 +18,7 @@ max_initiated_invite = 20
 
 # print help
 
-# [[pred, name], ...]
-def display_conjunction_list(conjunction, list):
+def display_conjunction_list(conjunction, list): # list = [[pred, name], ...]
   n = 0
   i = 0
   str = ""
@@ -91,9 +95,99 @@ def validate_zip_code(value):
     if info.City == None:
         raise ValidationError("This zipcode is not a valid US zip code.")
 
-# Create your models here.
+# model help
+
+def has_team(username):
+    try:
+        return Team.objects.get(username=username)
+    except:
+        return None
+
+def has_person(username):
+    try:
+        return Person.objects.get(username=username)
+    except:
+        return None
 
 ################################################################################
+# Person
+
+class Person(models.Model):
+    # info about person
+    username = models.CharField(max_length=200, default="")
+    guardian_name = models.CharField(max_length=200, help_text="Enter the name of the child's guardian.")
+    child_name = models.CharField(max_length=200, help_text="Enter the name of the child that you are looking a team for.")
+    child_interest = models.TextField(max_length=1000, help_text="Enter your child's interest and relevant experience. Write description to read as a paragraph.")
+    school_district_name = models.CharField(max_length=200, help_text="Enter the name of your child's school district. Some school-based teams are restricted to children in the district.")
+    zip_code = models.PositiveSmallIntegerField(validators=[validate_zip_code], help_text="5 digit ZIP code of where you live.")
+    years_of_FIRST_experience = models.PositiveSmallIntegerField(default=0, help_text="Enter the number of seasons that your child has participated in FIRST programs.")
+    # what is child looking for
+    interested_in_jFLL = models.BooleanField(default=False, help_text="Select if your child is interested in joining a Junior FIRST Lego League (jFLL) team.")
+    interested_in_FLL  = models.BooleanField(default=False, help_text="Select if your child is interested in joining an FIRST Lego League (FLL) team.")    
+    interested_in_FTC  = models.BooleanField(default=False, help_text="Select if your child is interested in joining an FIRST Tech Challenge (FTC) team.")    
+    interested_in_FRC  = models.BooleanField(default=False, help_text="Select if your child is interested in joining an FIRST Robotics Competition (FRC) team.")    
+    # stats
+    first_update = models.DateField(auto_now_add=True)
+    last_update = models.DateField(auto_now=True)
+    update_count = models.PositiveIntegerField(default=0)
+    looking_request_count = models.PositiveIntegerField(default=0)
+    requested_count = models.PositiveIntegerField(default=0)
+    #local data
+    initialized = False
+    zip_code_cached = 0
+    town_name = ""
+    state_name = ""
+    latitude = 0.0
+    longitude = 0.0
+    
+    # methods
+    def __str__(self):
+        return "%s-%s" % (self.username, self.child_name)
+
+    def child_team_interest_description(self, positive_pre_sentence, negative_pre_sentence):
+        if self.interested_in_jFLL or self.interested_in_FLL or self.interested_in_FTC or self.interested_in_FRC:
+            str = positive_pre_sentence + " "
+            str += display_or_list([[self.interested_in_jFLL, "junior FLL"], [self.interested_in_FLL, "FLL"], [self.interested_in_FTC, "FTC"], [self.interested_in_FRC, "FRC"]])
+            return str + " team"
+        else:
+            return negative_pre_sentence
+
+    def child_team_interest(self):
+        return "Child is %s. " % self.child_team_interest_description("interested in", "not currently interested in joining a new team.  ")
+    
+    def child_description(self):
+        self.update_zip_info()        
+        str = "A child from %s, %s, is %s.  " % (self.town_name, self.state_name, self.child_team_interest_description("looking for a", "not currently looking for a"))
+        str += "The child lives in the %s school district" % self.school_district_name
+        if self.years_of_FIRST_experience > 0:
+            str += " and has %d %s of FIRST experience. " % (self.years_of_FIRST_experience, display_pluralized(self.years_of_FIRST_experience, "year"))
+        else:
+            str += ".  "
+        return str
+    
+    def update_zip_info(self):
+        zipcode_search_engine = ZipcodeSearchEngine()
+        if self.zip_code_cached != self.zip_code:
+            self.zip_code_cached = self.zip_code
+            info = zipcode_search_engine.by_zipcode(self.zip_code)
+            self.town_name = info.City
+            self.state_name = info.State
+            self.latitude = info.Latitude
+            self.longitude = info.Longitude
+
+    def distance_from(self, other_latitude, other_longitude):
+        self.update_zip_info()
+        return great_circle([self.latitude, self.longitude], [other_latitude, other_longitude])
+
+class PersonForm(ModelForm):
+    class Meta:
+        model = Person
+        fields = ['guardian_name', 'child_name','child_interest','school_district_name','zip_code','years_of_FIRST_experience','interested_in_jFLL','interested_in_FLL','interested_in_FTC','interested_in_FRC'] 
+
+
+
+################################################################################
+# Team
 
 class Team(models.Model):
     UNSPECIFIED = '-'
@@ -115,7 +209,7 @@ class Team(models.Model):
         default=UNSPECIFIED,
         validators=[validate_first_program]
     )
-    username = models.CharField(max_length=200)
+    username = models.CharField(max_length=200, default="")
     team_name = models.CharField(max_length=200, help_text="Enter the name of your team.")
     team_number = models.IntegerField(blank=True, null=True, help_text="Enter the team of your team. Prospective teams, established jFLL, or established FLL teams can leave the field blank.")
     school_based_team = models.BooleanField(default=False, help_text="Select if your team is restricted to members living in the school district.")
@@ -135,10 +229,11 @@ class Team(models.Model):
     # stats
     first_update = models.DateField(auto_now_add=True)
     last_update = models.DateField(auto_now=True)
-    update_count = models.PositiveIntegerField(default=0, editable=False)
-    looking_request_count = models.PositiveIntegerField(default=0, editable=False)
-    requested_count = models.PositiveIntegerField(default=0, editable=False)
+    update_count = models.PositiveIntegerField(default=0)
+    looking_request_count = models.PositiveIntegerField(default=0)
+    requested_count = models.PositiveIntegerField(default=0)
     #local data
+    initialized = False
     zip_code_cached = 0
     town_name = ""
     state_name = ""
@@ -146,11 +241,11 @@ class Team(models.Model):
     longitude = 0.0
     #methods
     def __str__(self):
-        return "%s %s" %(self.team_number_description(), self.team_name)
+        return "%s-%s-%s" %(self.username, self.team_number_description(), self.team_name)
 
     def team_number_description(self):
         if self.team_number:
-            return "%s-%d" %(self.get_first_program_display(), self.team_number)
+            return "%s%d" %(self.get_first_program_display(), self.team_number)
         else:
             return "%s" %(self.get_first_program_display())
                      
@@ -197,74 +292,12 @@ class Team(models.Model):
     def distance_from(self, other_latitude, other_longitude):
         self.update_zip_info()
         return great_circle([self.latitude, self.longitude], [other_latitude, other_longitude])
-        
-################################################################################
 
-class Person(models.Model):
-    # info about person
-    username = models.CharField(max_length=200)
-    guardian_name = models.CharField(max_length=200, help_text="Enter the name of the child's guardian.")
-    child_name = models.CharField(max_length=200, help_text="Enter the name of the child that you are looking a team for.")
-    child_interest = models.TextField(max_length=1000, help_text="Enter your child's interest and relevant experience. Write description to read as a paragraph.")
-    school_district_name = models.CharField(max_length=200, help_text="Enter the name of your child's school district. Some school-based teams are restricted to children in the district.")
-    zip_code = models.PositiveSmallIntegerField(validators=[validate_zip_code], help_text="5 digit ZIP code of where you live.")
-    years_of_FIRST_experience = models.PositiveSmallIntegerField(default=0, help_text="Enter the number of seasons that your child has participated in FIRST programs.")
-    # what is child looking for
-    interested_in_jFLL = models.BooleanField(default=False, help_text="Select if your child is interested in joining a Junior FIRST Lego League (jFLL) team.")
-    interested_in_FLL  = models.BooleanField(default=False, help_text="Select if your child is interested in joining an FIRST Lego League (FLL) team.")    
-    interested_in_FTC  = models.BooleanField(default=False, help_text="Select if your child is interested in joining an FIRST Tech Challenge (FTC) team.")    
-    interested_in_FRC  = models.BooleanField(default=False, help_text="Select if your child is interested in joining an FIRST Robotics Competition (FRC) team.")    
-    # stats
-    first_update = models.DateField(auto_now_add=True)
-    last_update = models.DateField(auto_now=True)
-    update_count = models.PositiveIntegerField(default=0, editable=False)
-    looking_request_count = models.PositiveIntegerField(default=0, editable=False)
-    requested_count = models.PositiveIntegerField(default=0, editable=False)
-    #local data
-    zip_code_cached = 0
-    town_name = ""
-    state_name = ""
-    latitude = 0.0
-    longitude = 0.0
-    
-    # methods
-    def __str__(self):
-        return self.child_name
-
-    def child_team_interest_description(self, positive_pre_sentence, negative_pre_sentence):
-        if self.interested_in_jFLL or self.interested_in_FLL or self.interested_in_FTC or self.interested_in_FRC:
-            str = positive_pre_sentence + " "
-            str += display_or_list([[self.interested_in_jFLL, "junior FLL"], [self.interested_in_FLL, "FLL"], [self.interested_in_FTC, "FTC"], [self.interested_in_FRC, "FRC"]])
-            return str + " team"
-        else:
-            return negative_pre_sentence
-
-    def child_team_interest(self):
-        return "Child is %s. " % self.child_team_interest_description("interested in", "not currently interested in joining a new team.  ")
-    
-    def child_description(self):
-        self.update_zip_info()        
-        str = "A child from %s, %s, is %s.  " % (self.town_name, self.state_name, self.child_team_interest_description("looking for a", "not currently looking for a"))
-        str += "The child lives in the %s school district" % self.school_district_name
-        if self.years_of_FIRST_experience > 0:
-            str += " and has %d %s of FIRST experience. " % (self.years_of_FIRST_experience, display_pluralized(self.years_of_FIRST_experience, "year"))
-        else:
-            str += ".  "
-        return str
-    
-    def update_zip_info(self):
-        zipcode_search_engine = ZipcodeSearchEngine()
-        if self.zip_code_cached != self.zip_code:
-            self.zip_code_cached = self.zip_code
-            info = zipcode_search_engine.by_zipcode(self.zip_code)
-            self.town_name = info.City
-            self.state_name = info.State
-            self.latitude = info.Latitude
-            self.longitude = info.Longitude
-
-    def distance_from(self, other_latitude, other_longitude):
-        self.update_zip_info()
-        return great_circle([self.latitude, self.longitude], [other_latitude, other_longitude])
+class TeamForm(ModelForm):
+    class Meta:
+        model = Team
+        fields = ['first_program', 'team_name', 'team_number', 'school_based_team', 'school_district_name', 'zip_code', 'year_founded', 'description', 'achievement', 'web_site', 'looking_for_teammate', 'prospective_teammate_profile', 'looking_to_mentor_another_team', 'prospective_team_profile', 'looking_for_mentorship', 'help_request'] 
+ 
 
 ################################################################################
 
@@ -290,7 +323,6 @@ class Invite(models.Model):
     DECLINED = 'D'
     OLD_DECLINED = 'O'
     EXPIRED = 'E'
-
     STATUS = (
         (INITIATED, 'initiated'),
         (ACCEPTED, 'accepted'),
@@ -301,44 +333,93 @@ class Invite(models.Model):
     # invite status
     status = models.CharField(max_length=1, choices=STATUS, default=INITIATED)
     # methods
+
+    def __str__(self):
+        return "%s-%s-%s" % (self.invitor_username, self.prospective_username,
+                             self.get_type_display())
     
     @classmethod
     def create(cls, invitor_username, prospective_username, type):
         invite = cls(invitor_username=invitor_username, prospective_username=prospective_username, type=type)
-        print(invite)
         return invite
 
     @classmethod
-    def find_pending_invite(cls, invitor_username, prospective_username, type):
+    def find_identical_pending_invite(cls, invitor_username, prospective_username, type):
         # does same invite already exists?
         qs = cls.objects.filter(invitor_username=invitor_username, prospective_username=prospective_username, type=type)
         for i in qs:
             # ignore completed requests
             if not i.completed():
+                print("find request that was not completed %s %s" % (invitor_username, prospective_username))
                 return i
         return None
 
+    @classmethod
+    def pending_invite_num(cls, invitor_username):
+        # does same invite already exists?
+        qs = cls.objects.filter(invitor_username=invitor_username)
+        num = 0
+        for i in qs:
+            # ignore completed requests
+            if not i.completed():
+                num += 1
+        return num
+
     # invite offers exired after a number of days
     def expired(self, factor):
-        delta = datetime.today - self.date
-        if delta.in_days > factor * invite_expiration_in_days:
+        today = datetime.date.today()
+        today_num = today.year * 365 + today.month * 31 + today.day
+        old_num = self.date.year * 365 + self.date.month * 31 + self.date.day
+        delta = today_num - old_num
+        if delta > factor * invite_expiration_in_days:
             return True
         return False
     
     # completed if accepted / declined / expired. Check conditions for expired
     def completed(self):
         # check new expired
-        if self.status == INITIATED and self.expired(1):
+        if self.status == self.INITIATED and self.expired(1):
             self.status = self.EXPIRED
             self.save()
-        if self.status == DECLINED and self.expired(2):
+        if self.status == self.DECLINED and self.expired(2):
             self.status = self.OLD_DECLINED
             self.save()
         if self.status == self.ACCEPTED or self.status == self.OLD_DECLINED or self.status == self.EXPIRED:
             return True
         return False
 
+    def team_email_and_name(self, tusername):
+        try:
+            team = Team.objects.get(username=tusername)
+            user = User.objects.get(username=tusername)
+            print("got team %s %s" % (user.email, team.team_name))
+            return (user.email, team.team_name)
+        except:
+            return None
 
-        
-
-    
+    def person_email_and_name(self, pusername):
+        try:
+            person = Person.objects.get(username=pusername)
+            user = User.objects.get(username=pusername)
+            print("got user %s %s" % (user.email, person.guardian_name))
+            return (user.email, person.guardian_name)
+        except:
+            return None
+            
+    def email_and_name_pairs(self):
+        if self.type == self.P2T:
+            p = self.person_email_and_name(self.invitor_username)
+            t = self.team_email_and_name(self.prospective_username)
+            if p and t:
+                return p + t
+        elif self.type == self.T2P:
+            t = self.team_email_and_name(self.invitor_username)
+            p = self.person_email_and_name(self.prospective_username)
+            if p and t:
+                return p + t
+        else:
+            t1 = self.team_email_and_name(self.invitor_username)
+            t2 = self.team_email_and_name(self.prospective_username)
+            if t1 and t2:
+                return t1 + t2
+        return None

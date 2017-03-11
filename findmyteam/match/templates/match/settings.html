@@ -6,7 +6,26 @@
 Settings:
 </h2>
 
+
+{% if not has_person and not has_team %}
+  <ul>
+    Please decide if your account is linked with a person or a
+    team. And then, update the corresponding profile. You will not be able to
+    revert your decision once a profile is saved.
+  </ul>
+{% endif %}
+
 <ul>
+  {% if has_person or not has_team %}
+  <li>
+    <a href="/match/person_profile"> Update person profile.</a>
+  </li>
+  {% endif %}
+  {% if not has_person or has_team %}
+  <li>
+    <a href="/match/team_profile"> Update team profile.</a>
+  </li>
+  {% endif %}
   <li>
     <a href="/accounts/email"> Update email settings.</a>
   </li>
