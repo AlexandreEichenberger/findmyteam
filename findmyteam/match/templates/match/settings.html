@@ -1,39 +1,47 @@
 {% extends "base.html" %}
 {% block content %}
 
+{% if is_uninit %}
 
-<h2>
-Settings:
-</h2>
+  <h2>
+  Welcome to your first visit
+  </h2>
 
-
-{% if not has_person and not has_team %}
+    You need to register as either a person or a team. This
+    choice is final.
   <ul>
-    Please decide if your account is linked with a person or a
-    team. And then, update the corresponding profile. You will not be able to
-    revert your decision once a profile is saved.
+  <li>
+    <a href="/match/person_profile"> Register as a person.</a>
+  </li>
+  <li>
+    <a href="/match/team_profile"> Register as a team.</a>
+  </li>
   </ul>
-{% endif %}
+{% else %}
 
-<ul>
-  {% if has_person or not has_team %}
-  <li>
-    <a href="/match/person_profile"> Update person profile.</a>
-  </li>
+  <h2>
+ Update settings
+  </h2>
+
+  {% if is_person %}
+    <li>
+      <a href="/match/person_profile"> Update person profile.</a>
+    </li>
+  {% else %}
+    <li>
+      <a href="/match/team_profile"> Update team profile.</a>
+    </li>
   {% endif %}
-  {% if not has_person or has_team %}
-  <li>
-    <a href="/match/team_profile"> Update team profile.</a>
-  </li>
-  {% endif %}
+
   <li>
     <a href="/accounts/email"> Update email settings.</a>
   </li>
   <li>
     <a href="/accounts/password/change/"> Update password settings.</a>
   </li>
+{% endif %}
 
-</ul>
+
 
 
 {% endblock %}

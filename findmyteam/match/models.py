@@ -99,13 +99,19 @@ def validate_zip_code(value):
 
 def has_team(username):
     try:
-        return Team.objects.get(username=username)
+        t = Team.objects.get(username=username)
+        if t:
+            print("has team %s" % username)
+        return t
     except:
         return None
 
 def has_person(username):
     try:
-        return Person.objects.get(username=username)
+        p = Person.objects.get(username=username)
+        if p:
+            print("has person %s" % username)
+        return p
     except:
         return None
 

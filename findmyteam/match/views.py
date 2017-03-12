@@ -16,17 +16,39 @@ from .models import has_team, has_person, invite_expiration_in_days, max_initiat
 # general
 # dummy response return HttpResponse("Hello.")
 
+IS_ANONYMOUS = 0
+IS_PERSON = 1
+IS_TEAM = 2
+IS_UNINIT_ENTITY = 3
+
+def classify(request):
+    if not request.user.is_authenticated:
+        return IS_ANONYMOUS
+    # registered
+    username = request.user.username
+    if has_person(username):
+        return IS_PERSON
+    if has_team(username):
+        return IS_TEAM
+    # registered, but neiter... should set now
+    return IS_UNINIT_ENTITY
+
 def index(request):
+    type = classify(request)
+    if type == IS_UNINIT_ENTITY:
+        return render(request, 'match/settings.html', {'is_uninit' : True})
     return render(request, 'match/index.html', {})
 
+@login_required
 def settings(request):
-    context = {'has_person' : False, 'has_team': False}
-    if request.user.is_authenticated:
-        username = request.user.username
-        if has_person(username):
-            context['has_person'] = True
-        if has_team(username):
-            context['has_team'] = True
+    type = classify(request)
+    context = {}
+    if type == IS_PERSON:
+        context['is_person'] = True
+    elif type == IS_TEAM:
+        context['is_team'] = True
+    else:
+        context['is_uninit'] = True
     return render(request, 'match/settings.html', context)
 
 max_travel_distance = 200
