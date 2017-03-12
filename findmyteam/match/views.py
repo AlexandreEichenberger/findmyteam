@@ -49,9 +49,7 @@ def person_profile(request):
             form = PersonForm(request.POST, instance=person)
             if form.is_valid():
                 person = form.save(commit=False)
-                person.username = username
-                person.last_update = datetime.datetime.now()
-                person.update_count += 1
+                person.info_cleanup(username, False)
                 person.save()
                 return settings(request)
         else:
@@ -66,10 +64,7 @@ def person_profile(request):
             form = PersonForm(request.POST)
             if form.is_valid():
                 person = form.save(commit=False)
-                person.username = username
-                person.first_update = datetime.datetime.now()
-                person.last_update = person.last_update
-                person.update_count = 0
+                person.info_cleanup(username, True)
                 person.save()
                 return settings(request)
         else:
@@ -149,7 +144,6 @@ def person_searching_teams(request):
     if request.user.is_authenticated:
         person = has_person(request.user.username)
         if person != None:
-            person.update_zip_info()
             return render_person_searching_teams(request, person.zip_code, 15,
                 person.latitude, person.longitude, True,
                 person.interested_in_jFLL, person.interested_in_FLL, person.interested_in_FTC,
@@ -213,9 +207,7 @@ def team_profile(request):
             form = TeamForm(request.POST, instance=team)
             if form.is_valid():
                 team = form.save(commit=False)
-                team.username = username
-                team.last_update = datetime.datetime.now()
-                team.update_count += 1
+                team.info_cleanup(username, False)
                 team.save()
                 return settings(request)
         else:
@@ -230,10 +222,7 @@ def team_profile(request):
             form = TeamForm(request.POST)
             if form.is_valid():
                 team = form.save(commit=False)
-                team.username = username
-                team.first_update = datetime.datetime.now()
-                team.last_update = team.last_update
-                team.update_count = 0
+                team.info_cleanup(username, True)
                 team.save()
                 return settings(request)
         else:
@@ -288,7 +277,6 @@ def render_team_searching_persons(request, team, dist, error_message):
         qs = Person.objects.filter(interested_in_FTC = True)
     elif team.first_program == team.FRC:
         qs = Person.objects.filter(interested_in_FRC = True)
-    team.update_zip_info()
     person_list = []
     dist_list = []
     for p in qs:

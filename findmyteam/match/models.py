@@ -133,11 +133,10 @@ class Person(models.Model):
     looking_request_count = models.PositiveIntegerField(default=0)
     requested_count = models.PositiveIntegerField(default=0)
     #cached data
-    zip_code_cached = models.PositiveSmallIntegerField(default=0)
-    town_name = models.CharField(max_length=50, default="")
-    state_name = models.CharField(max_length=2, default="")
-    latitude = models.FloatField(default=0.0)
-    longitude = models.FloatField(default=0.0)
+    town_name = models.CharField(max_length=50, blank=True, default="")
+    state_name = models.CharField(max_length=2, blank=True, default="")
+    latitude = models.FloatField(default=0.0, blank=True)
+    longitude = models.FloatField(default=0.0, blank=True)
     
     # methods
     def __str__(self):
@@ -155,7 +154,6 @@ class Person(models.Model):
         return "Child is %s. " % self.child_team_interest_description("interested in", "not currently interested in joining a new team.  ")
     
     def child_description(self):
-        self.update_zip_info()        
         str = "A child from %s, %s, is %s.  " % (self.town_name, self.state_name, self.child_team_interest_description("looking for a", "not currently looking for a"))
         str += "The child lives in the %s school district" % self.school_district_name
         if self.years_of_FIRST_experience > 0:
@@ -163,19 +161,22 @@ class Person(models.Model):
         else:
             str += ".  "
         return str
-    
-    def update_zip_info(self):
-        if self.zip_code_cached != self.zip_code:
-            self.zip_code_cached = self.zip_code
-            zipcode_search_engine = ZipcodeSearchEngine()
-            info = zipcode_search_engine.by_zipcode(self.zip_code)
-            self.town_name = info.City
-            self.state_name = info.State
-            self.latitude = info.Latitude
-            self.longitude = info.Longitude
+
+    def info_cleanup(self, username, is_new):
+        print("update info for %s" % username)
+        self.username = username
+        self.last_update = datetime.datetime.now()
+        if is_new:
+            self.first_update = self.last_update
+            self.update_count = 0
+        self.update_count += 1
+        info = ZipcodeSearchEngine().by_zipcode(self.zip_code)
+        self.town_name = info.City
+        self.state_name = info.State
+        self.latitude = info.Latitude
+        self.longitude = info.Longitude
 
     def distance_from(self, other_latitude, other_longitude):
-        self.update_zip_info()
         return great_circle([self.latitude, self.longitude], [other_latitude, other_longitude])
 
 class PersonForm(ModelForm):
@@ -232,11 +233,10 @@ class Team(models.Model):
     looking_request_count = models.PositiveIntegerField(default=0)
     requested_count = models.PositiveIntegerField(default=0)
     #cached data
-    zip_code_cached = models.PositiveSmallIntegerField(default=0)
-    town_name = models.CharField(max_length=50, default="")
-    state_name = models.CharField(max_length=2, default="")
-    latitude = models.FloatField(default=0.0)
-    longitude = models.FloatField(default=0.0)
+    town_name = models.CharField(max_length=50, blank=True, default="")
+    state_name = models.CharField(max_length=2, blank=True, default="")
+    latitude = models.FloatField(default=0.0, blank=True)
+    longitude = models.FloatField(default=0.0, blank=True)
     #methods
     def __str__(self):
         return "%s-%s-%s" %(self.username, self.team_number_description(), self.team_name)
@@ -257,7 +257,6 @@ class Team(models.Model):
             return "%d-year-old " % (current - self.year_founded)
     
     def team_description(self):
-        self.update_zip_info()        
         str = "Team %s is a %s %s team based in %s, %s, " % (self.team_name, self.team_age_description(), self.get_first_program_display(), self.town_name, self.state_name)
         if self.school_based_team == True and self.school_district_name != None:
             str += "and affiliated with the %s school district. " % self.school_district_name
@@ -276,19 +275,22 @@ class Team(models.Model):
         else:
             str += "not currently looking for new teammates or mentoring opportunities.  "
         return str
-    
-    def update_zip_info(self):
-        if self.zip_code_cached != self.zip_code:
-            self.zip_code_cached = self.zip_code
-            zipcode_search_engine = ZipcodeSearchEngine()
-            info = zipcode_search_engine.by_zipcode(self.zip_code)
-            self.town_name = info.City
-            self.state_name = info.State
-            self.latitude = info.Latitude
-            self.longitude = info.Longitude
 
+    def info_cleanup(self, username, is_new):
+        print("update info for %s" % username)
+        self.username = username
+        self.last_update = datetime.datetime.now()
+        if is_new:
+            self.first_update = self.last_update
+            self.update_count = 0
+        self.update_count += 1
+        info = ZipcodeSearchEngine().by_zipcode(self.zip_code)
+        self.town_name = info.City
+        self.state_name = info.State
+        self.latitude = info.Latitude
+        self.longitude = info.Longitude
+        
     def distance_from(self, other_latitude, other_longitude):
-        self.update_zip_info()
         return great_circle([self.latitude, self.longitude], [other_latitude, other_longitude])
 
 class TeamForm(ModelForm):
