@@ -33,22 +33,36 @@ def classify(request):
     # registered, but neiter... should set now
     return IS_UNINIT_ENTITY
 
+def type_in_context(type):
+    if type == IS_PERSON:
+        return {'is_person' : True}
+    elif type == IS_TEAM:
+        return {'is_team' : True}
+    elif type == IS_UNINIT_ENTITY:
+        return {'is_uninit' : True}
+    else:
+        return {'anonymous' : True}
+
 def index(request):
     type = classify(request)
     if type == IS_UNINIT_ENTITY:
         return render(request, 'match/settings.html', {'is_uninit' : True})
     return render(request, 'match/index.html', {})
 
+def search(request):
+    type = classify(request)
+    if type == IS_UNINIT_ENTITY:
+        return render(request, 'match/settings.html', {'is_uninit' : True})
+    context = type_in_context(type)
+    return render(request, 'match/search.html', context)
+
+def programs(request):
+    return render(request, 'match/programs.html', {})
+
 @login_required
 def settings(request):
     type = classify(request)
-    context = {}
-    if type == IS_PERSON:
-        context['is_person'] = True
-    elif type == IS_TEAM:
-        context['is_team'] = True
-    else:
-        context['is_uninit'] = True
+    context = type_in_context(type)
     return render(request, 'match/settings.html', context)
 
 max_travel_distance = 200

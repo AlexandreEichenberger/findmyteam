@@ -4,17 +4,17 @@
 {% if is_uninit %}
 
   <h2>
-  Welcome to your first visit
+  Welcome to our site
   </h2>
 
-    You need to register as either a person or a team. This
-    choice is final.
-  <ul>
-  <li>
-    <a href="/match/person_profile"> Register as a person.</a>
+    During your first visit, you need to register as either a person or a team. Your
+    choice will be final and cannot be changed.
+  <ul class='choices_ul'>
+  <li class='choices_li' style="background-color:red;">
+    <a class='choices_a' href="/match/person_profile"> Register as a person.</a>
   </li>
-  <li>
-    <a href="/match/team_profile"> Register as a team.</a>
+  <li class='choices_li'style="background-color:blue;">
+    <a class='choices_a' href="/match/team_profile"> Register as a team.</a>
   </li>
   </ul>
 {% else %}
@@ -22,23 +22,23 @@
   <h2>
  Update settings
   </h2>
-
+  <ul  class='choices_ul'>
   {% if is_person %}
-    <li>
-      <a href="/match/person_profile"> Update person profile.</a>
+    <li class='choices_li'>
+      <a class='choices_a' href="/match/person_profile"> Update person profile.</a>
     </li>
   {% else %}
-    <li>
-      <a href="/match/team_profile"> Update team profile.</a>
+    <li class='choices_li'>
+      <a class='choices_a' href="/match/team_profile"> Update team profile.</a>
     </li>
   {% endif %}
-
-  <li>
-    <a href="/accounts/email"> Update email settings.</a>
+  <li class='choices_li'>
+    <a class='choices_a' href="/accounts/email"> Update email settings.</a>
   </li>
-  <li>
-    <a href="/accounts/password/change/"> Update password settings.</a>
+  <li class='choices_li'>
+    <a class='choices_a' href="/accounts/password/change/"> Update password settings.</a>
   </li>
+  </ul>
 {% endif %}
 
 

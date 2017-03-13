@@ -4,22 +4,38 @@
 <link rel="stylesheet" type="text/css" href="{% static 'match/style.css' %}">
 
 <html>
-<head>
-Find My Team
+  <head>
+    <!-- line and main text -->
+  <div class="neapolitan"><br>
+  <table class="toptable" style="width:100%">
+    <tr class="toptable">
+      <th class="top_name">findmyteam.org</th>
+      <th class="top_title">Connecting people, teams, and outrach organizations for the
+        promotion of STEM via FIRST<sup>&reg</sup> programs </th>
+      <th class="top_links">
+         {% if user.is_authenticated %}
+           {{ user.username }}<br>
+           <a id="settings" href="{% url 'match:settings' %}">profile</a><br>
+           <a id="logout" href="/accounts/logout">logout</a>
+         {% else %}
+           <a id="login" href="/accounts/login">login</a><br>
+           <a id="signup" href="/accounts/signup">register</a>
+         {% endif %}
+        </th>
+    </tr>
+  </table>
+  <div class="neapolitan"><br>
 <nav>
-<ul>
-  <li>
-    {% if user.is_authenticated %}
-      Hi {{ user.username }},
-      <a id="settings" href="{% url 'match:settings' %}">settings</a>
-      <a id="logout" href="/accounts/logout">logout</a>
-    {% else %}
-      <a id="login" href="/accounts/login">login</a>
-      <a id="signup" href="/accounts/signup">signup</a>
-    {% endif %}
-  </li>
-</ul>
+      
 </nav>
+<ul class="topnav_ul">
+  <li class="topnav_li"> <a class="topnav_a" href="{% url 'match:programs' %}">Programs</a></li>
+  <li class="topnav_li"> <a class="topnav_a" href="/match">Home</a></li>
+  <li class="topnav_li"> <a class="topnav_a" href="{% url 'match:settings' %}">Profile</a></li>
+  <li class="topnav_li"> <a class="topnav_a" href="{% url 'match:search' %}">Search</a></li>
+  <li class="topnav_li" style="float:right"> <a class="topnav_a" href="/match.about.html">About</a></li>
+</ul>
+<br>
 </head>
 
 <body>
@@ -27,14 +43,13 @@ Find My Team
 <header>
 </header>
 
-<nav>
-navigation menu
-</nav>
-
 {% block content %}
 {% endblock %}
 
 <footer>
+  <br>
+  <div class="neapolitan"><br>
+
 Supported by Robocracy
   <a href="http://ftcrobocracy.org">web</a>
   <a href="https://www.facebook.com/ftcrobocracy9773">facebook</a>

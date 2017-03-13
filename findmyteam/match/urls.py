@@ -6,7 +6,10 @@ app_name = "match"
 
 urlpatterns = [
     url(r'^$', views.index, name='index'),
-    url(r'^settings$', views.settings, name='settings'),
+    url(r'^search/$', views.search, name='search'),
+    url(r'^settings/$', views.settings, name='settings'),
+    url(r'^programs/$', views.programs, name='programs'),
+
     # person
     url(r'^person_profile/$', views.person_profile, name='person_profile'),
     url(r'^person_viewing_team/(?P<tusername>[a-zA-Z_]+)/$', views.person_viewing_team, name='person_viewing_team'),
