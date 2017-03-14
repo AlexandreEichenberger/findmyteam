@@ -1,8 +1,10 @@
+from django import forms
 from django.db import models
 from django.db.models import DEFERRED
 from django.db.models.signals import post_save
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from django.dispatch import receiver
 from django.forms import ModelForm
@@ -85,9 +87,17 @@ def great_circle(point1, point2, miles=True):
 
 # create custom validation
 
+def validate_user_type(value):
+    if value == UNSPECIFIED:
+        raise ValidationError("Please select a valid type of account.")
+
 def validate_first_program(value):
-    if value == Team.UNSPECIFIED:
+    if value == UNSPECIFIED:
         raise ValidationError("Please select a valid First program.")
+
+def validate_team_type(value):
+    if value == UNSPECIFIED:
+        raise ValidationError("Please select a valid team type.")
 
 def validate_zip_code(value):
     zipcode_search_engine = ZipcodeSearchEngine()
@@ -114,6 +124,21 @@ def has_person(username):
         return p
     except:
         return None
+
+################################################################################
+# extension to user model
+
+UNSPECIFIED = '-'
+USER_PERSON = 'P'
+USER_TEAM   = 'T'
+USER_ORG    = 'O'
+USER_TYPE= (
+    (UNSPECIFIED, '-'),
+    (USER_PERSON, 'Account for a person'),
+    (USER_TEAM, 'Account for a team'),
+    (USER_ORG, 'Account for a charitable organization'),
+)
+
 
 ################################################################################
 # Person
@@ -196,7 +221,6 @@ class PersonForm(ModelForm):
 # Team
 
 class Team(models.Model):
-    UNSPECIFIED = '-'
     JFLL = 'J'
     FLL = 'L'
     FTC = 'T'
@@ -213,12 +237,32 @@ class Team(models.Model):
         max_length=1,
         choices=FIRST_PROGRAM,
         default=UNSPECIFIED,
-        validators=[validate_first_program]
+        validators=[validate_first_program],
+        help_text="Enter the FIRST program that the team participate in."
     )
     username = models.CharField(max_length=200, default="")
     team_name = models.CharField(max_length=200, help_text="Enter the name of your team.")
     team_number = models.IntegerField(blank=True, null=True, help_text="Enter the team of your team. Prospective teams, established jFLL, or established FLL teams can leave the field blank.")
-    school_based_team = models.BooleanField(default=False, help_text="Select if your team is restricted to members living in the school district.")
+    SCHOOL = 'S'
+    CLUB_4H = 'H'
+    BOY_SCOUT = 'B'
+    GIRL_SCOUT = 'G'
+    OTHER = 'O'
+    TEAM_TYPE = (
+        (UNSPECIFIED, '-'),
+        (SCHOOL, 'school based'),
+        (CLUB_4H, '4H club'),
+        (BOY_SCOUT, 'boy scout'),
+        (GIRL_SCOUT, 'girl scout'),
+        (OTHER, 'other')
+    )
+    team_type = models.CharField(
+        max_length=1,
+        choices=TEAM_TYPE,
+        default=UNSPECIFIED,
+        validators=[validate_team_type],
+        help_text="Enter the type of association that your team is part of.  School-based teams typically restrict membership to children living in the school district."
+    )
     school_district_name = models.CharField(max_length=200, blank=True, null=True, help_text="Enter the name of your school district if your team is a school-based team. Otherwise, leave the field blank.")
     zip_code = models.PositiveSmallIntegerField(validators=[validate_zip_code], help_text="5 digit ZIP code of where you meet.")
     year_founded = models.PositiveSmallIntegerField(blank=True, null=True, help_text="Enter the year that your team was founded. Leave field blank for prospective teams.")
@@ -264,7 +308,7 @@ class Team(models.Model):
     
     def team_description(self):
         str = "Team %s is a %s %s team based in %s, %s, " % (self.team_name, self.team_age_description(), self.get_first_program_display(), self.town_name, self.state_name)
-        if self.school_based_team == True and self.school_district_name != None:
+        if self.team_type == self.SCHOOL and self.school_district_name != None:
             str += "and affiliated with the %s school district. " % self.school_district_name
         else:
             str += "and is run as a club-team.  "
@@ -302,7 +346,7 @@ class Team(models.Model):
 class TeamForm(ModelForm):
     class Meta:
         model = Team
-        fields = ['first_program', 'team_name', 'team_number', 'school_based_team', 'school_district_name', 'zip_code', 'year_founded', 'description', 'achievement', 'web_site', 'looking_for_teammate', 'prospective_teammate_profile', 'looking_to_mentor_another_team', 'prospective_team_profile', 'looking_for_mentorship', 'help_request'] 
+        fields = ['first_program', 'team_name', 'team_number', 'team_type', 'school_district_name', 'zip_code', 'year_founded', 'description', 'achievement', 'web_site', 'looking_for_teammate', 'prospective_teammate_profile', 'looking_to_mentor_another_team', 'prospective_team_profile', 'looking_for_mentorship', 'help_request'] 
  
 
 ################################################################################
@@ -311,7 +355,8 @@ class Invite(models.Model):
     # info about person
     invitor_username = models.CharField(max_length=200)
     prospective_username = models.CharField(max_length=200)
-    date = models.DateField(auto_now_add=True)
+    date_invited = models.DateField(auto_now_add=True)
+    date_response = models.DateField(blank=True, null=True)
     P2T = 'P'
     T2P = 'T'
     T2M = 'H'
@@ -375,7 +420,7 @@ class Invite(models.Model):
     def expired(self, factor):
         today = datetime.date.today()
         today_num = today.year * 365 + today.month * 31 + today.day
-        old_num = self.date.year * 365 + self.date.month * 31 + self.date.day
+        old_num = self.date_invited.year * 365 + self.date_invited.month * 31 + self.date_invited.day
         delta = today_num - old_num
         if delta > factor * invite_expiration_in_days:
             return True
