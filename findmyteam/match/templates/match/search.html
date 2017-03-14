@@ -15,12 +15,12 @@ Search
 
 <ul class='choices_ul'>
   {% if is_team %}
-    <li class='choices_li' style="background-color:red;">
-    <a class='choices_a' href="{% url 'match:person_searching_teams' %}">Search teams.</a>
+    <li class='choices_li' style="background-color:blue;">
+    <a class='choices_a' href="{% url 'match:team_searching_persons' %}">Search people.</a>
     </li>
   {% endif %}
-  <li class='choices_li' style="background-color:blue;">
-  <a class='choices_a' href="{% url 'match:team_searching_persons' %}">Search people.</a>
+  <li class='choices_li' style="background-color:red;">
+  <a class='choices_a' href="{% url 'match:person_searching_teams' %}">Search teams.</a>  
   </li>
 </ul>
 

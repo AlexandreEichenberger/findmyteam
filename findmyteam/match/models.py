@@ -6,8 +6,12 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.forms import ModelForm
+from django.http import Http404
+from django.shortcuts import get_object_or_404
+
 
 from uszipcode import ZipcodeSearchEngine
 from dateutil.relativedelta import relativedelta
@@ -88,15 +92,15 @@ def great_circle(point1, point2, miles=True):
 # create custom validation
 
 def validate_user_type(value):
-    if value == UNSPECIFIED:
+    if value == User.UNSPECIFIED:
         raise ValidationError("Please select a valid type of account.")
 
 def validate_first_program(value):
-    if value == UNSPECIFIED:
+    if value == Team.UNSPECIFIED:
         raise ValidationError("Please select a valid First program.")
 
 def validate_team_type(value):
-    if value == UNSPECIFIED:
+    if value == Team.UNSPECIFIED:
         raise ValidationError("Please select a valid team type.")
 
 def validate_zip_code(value):
@@ -105,40 +109,87 @@ def validate_zip_code(value):
     if info.City == None:
         raise ValidationError("This zipcode is not a valid US zip code.")
 
-# model help
-
-def has_team(username):
-    try:
-        t = Team.objects.get(username=username)
-        if t:
-            print("has team %s" % username)
-        return t
-    except:
-        return None
-
-def has_person(username):
-    try:
-        p = Person.objects.get(username=username)
-        if p:
-            print("has person %s" % username)
-        return p
-    except:
-        return None
 
 ################################################################################
 # extension to user model
 
-UNSPECIFIED = '-'
-USER_PERSON = 'P'
-USER_TEAM   = 'T'
-USER_ORG    = 'O'
-USER_TYPE= (
-    (UNSPECIFIED, '-'),
-    (USER_PERSON, 'Account for a person'),
-    (USER_TEAM, 'Account for a team'),
-    (USER_ORG, 'Account for a charitable organization'),
-)
+class Profile(models.Model):
+    # extend user
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    UNSPECIFIED = '-'
+    PERSON = 'P'
+    TEAM   = 'T'
+    ORG    = 'O'
+    # type
+    TYPE= (
+        (UNSPECIFIED, '-'),
+        (PERSON, 'Account for a person'),
+        (TEAM, 'Account for a team'),
+        (ORG, 'Account for a charitable organization'),
+        )
+    type = models.CharField(
+        max_length=1,
+        choices=TYPE,
+        default=UNSPECIFIED
+        )
+    # reference
+    UNDEFINED_ID = -1
+    specific_profile_id = models.IntegerField(default=UNDEFINED_ID)
+    # computed stats
+    first_update = models.DateField(auto_now_add=True)
+    last_update = models.DateField(auto_now=True)
+    update_count = models.PositiveIntegerField(default=0)
+    looking_request_count = models.PositiveIntegerField(default=0)
+    requested_count = models.PositiveIntegerField(default=0)
+    accepted_count = models.PositiveIntegerField(default=0)
 
+    # methods
+    def __str__(self):
+        return self.user.username
+
+    def update_info(self):
+        print("update profile info for %s" % self.user.username)
+        self.last_update = datetime.datetime.now()
+        self.update_count += 1
+
+    def init_info(self, type, id):
+        print("init profile info for %s with type %s and id %s" % (self.user.username, type, id))
+        self.type = type
+        self.specific_profile_id = id
+        self.first_update = datetime.datetime.now()
+        self.update_count = 0
+        self.looking_request_count = 0
+        self.requested_count = 0
+        self.accepted_count = 0
+        self.update_info()
+        
+    def is_person(self):
+        return self.type == self.PERSON
+
+    def is_team(self):
+        return self.type == self.TEAM
+
+    def is_unspecified(self):
+        return self.type == self.UNSPECIFIED
+
+    def get_person(self):
+        if self.is_person():
+            return get_object_or_404(Person, id=self.specific_profile_id)
+        raise Http404("Get for person for a non-person.")
+        
+    def get_team(self):
+        if self.is_team():
+            return get_object_or_404(Team, id=self.specific_profile_id)
+        raise Http404("Get team details for a non-team.")
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.profile.save()
 
 ################################################################################
 # Person
@@ -146,28 +197,32 @@ USER_TYPE= (
 class Person(models.Model):
     # info about person
     username = models.CharField(max_length=200, default="")
-    guardian_name = models.CharField(max_length=200, help_text="Enter the name of the child's guardian.")
-    child_name = models.CharField(max_length=200, help_text="Enter the name of the child that you are looking a team for.")
-    child_interest = models.TextField(max_length=1000, help_text="Enter your child's interest and relevant experience. Write description to read as a paragraph.")
-    school_district_name = models.CharField(max_length=200, help_text="Enter the name of your child's school district. Some school-based teams are restricted to children in the district.")
-    zip_code = models.PositiveSmallIntegerField(validators=[validate_zip_code], help_text="5 digit ZIP code of where you live.")
-    years_of_FIRST_experience = models.PositiveSmallIntegerField(default=0, help_text="Enter the number of seasons that your child has participated in FIRST programs.")
-    # what is child looking for
-    interested_in_jFLL = models.BooleanField(default=False, help_text="Select if your child is interested in joining a Junior FIRST Lego League (jFLL) team.")
-    interested_in_FLL  = models.BooleanField(default=False, help_text="Select if your child is interested in joining an FIRST Lego League (FLL) team.")    
-    interested_in_FTC  = models.BooleanField(default=False, help_text="Select if your child is interested in joining an FIRST Tech Challenge (FTC) team.")    
-    interested_in_FRC  = models.BooleanField(default=False, help_text="Select if your child is interested in joining an FIRST Robotics Competition (FRC) team.")    
-    # stats
-    first_update = models.DateField(auto_now_add=True)
-    last_update = models.DateField(auto_now=True)
-    update_count = models.PositiveIntegerField(default=0)
-    looking_request_count = models.PositiveIntegerField(default=0)
-    requested_count = models.PositiveIntegerField(default=0)
-    #cached data
+    guardian_name = models.CharField(max_length=200,
+        help_text="Enter the name of the child's guardian.")
+    child_name = models.CharField(max_length=200,
+        help_text="Enter the name of the child that you are looking a team for.")
+    child_interest = models.TextField(max_length=1000,
+        help_text="Enter your child's interest and relevant experience. Text should read as a paragraph.")
+    school_district_name = models.CharField(max_length=200,
+        help_text="Enter the name of your child's school district. Some school-based teams restricts membership to children in the district.")
+    years_of_FIRST_experience = models.PositiveSmallIntegerField(default=0,
+        help_text="Enter the number of seasons that your child has participated in FIRST programs.")
+    zip_code = models.PositiveSmallIntegerField(validators=[validate_zip_code],
+        help_text="5 digit ZIP code of where you live.")
+    # computed location data
     town_name = models.CharField(max_length=50, blank=True, default="")
     state_name = models.CharField(max_length=2, blank=True, default="")
     latitude = models.FloatField(default=0.0, blank=True)
-    longitude = models.FloatField(default=0.0, blank=True)
+    longitude = models.FloatField(default=0.0, blank=True)    
+    # what is child looking for
+    interested_in_jFLL = models.BooleanField(default=False,
+        help_text="Select if your child is interested in joining a Junior FIRST Lego League (jFLL) team.")
+    interested_in_FLL  = models.BooleanField(default=False,
+        help_text="Select if your child is interested in joining an FIRST Lego League (FLL) team.")    
+    interested_in_FTC  = models.BooleanField(default=False,
+        help_text="Select if your child is interested in joining an FIRST Tech Challenge (FTC) team.")    
+    interested_in_FRC  = models.BooleanField(default=False,
+        help_text="Select if your child is interested in joining an FIRST Robotics Competition (FRC) team.") 
     
     # methods
     def __str__(self):
@@ -176,31 +231,31 @@ class Person(models.Model):
     def child_team_interest_description(self, positive_pre_sentence, negative_pre_sentence):
         if self.interested_in_jFLL or self.interested_in_FLL or self.interested_in_FTC or self.interested_in_FRC:
             str = positive_pre_sentence + " "
-            str += display_or_list([[self.interested_in_jFLL, "junior FLL"], [self.interested_in_FLL, "FLL"], [self.interested_in_FTC, "FTC"], [self.interested_in_FRC, "FRC"]])
+            str += display_or_list([[self.interested_in_jFLL, "junior FLL"],
+                    [self.interested_in_FLL, "FLL"], [self.interested_in_FTC, "FTC"],
+                    [self.interested_in_FRC, "FRC"]])
             return str + " team"
         else:
             return negative_pre_sentence
 
     def child_team_interest(self):
-        return "Child is %s. " % self.child_team_interest_description("interested in", "not currently interested in joining a new team.  ")
+        return "Child is %s. " % self.child_team_interest_description("interested in",
+            "not currently interested in joining a new team.  ")
     
     def child_description(self):
-        str = "A child from %s, %s, is %s.  " % (self.town_name, self.state_name, self.child_team_interest_description("looking for a", "not currently looking for a"))
+        str = "A child from %s, %s, is %s.  " % (self.town_name, self.state_name,
+            self.child_team_interest_description("looking for a", "not currently looking for a"))
         str += "The child lives in the %s school district" % self.school_district_name
         if self.years_of_FIRST_experience > 0:
-            str += " and has %d %s of FIRST experience. " % (self.years_of_FIRST_experience, display_pluralized(self.years_of_FIRST_experience, "year"))
+            str += " and has %d %s of FIRST experience. " % (self.years_of_FIRST_experience,
+                display_pluralized(self.years_of_FIRST_experience, "year"))
         else:
             str += ".  "
         return str
 
-    def info_cleanup(self, username, is_new):
-        print("update info for %s" % username)
+    def update_info(self, username):
+        print("update person info for %s" % username)
         self.username = username
-        self.last_update = datetime.datetime.now()
-        if is_new:
-            self.first_update = self.last_update
-            self.update_count = 0
-        self.update_count += 1
         info = ZipcodeSearchEngine().by_zipcode(self.zip_code)
         self.town_name = info.City
         self.state_name = info.State
@@ -208,7 +263,7 @@ class Person(models.Model):
         self.longitude = info.Longitude
 
     def distance_from(self, other_latitude, other_longitude):
-        return great_circle([self.latitude, self.longitude], [other_latitude, other_longitude])
+        return great_circle([self.latitude, self.longitude], [other_latitude, other_longitude])        
 
 class PersonForm(ModelForm):
     class Meta:
@@ -221,6 +276,7 @@ class PersonForm(ModelForm):
 # Team
 
 class Team(models.Model):
+    UNSPECIFIED = '-'
     JFLL = 'J'
     FLL = 'L'
     FTC = 'T'
@@ -238,11 +294,12 @@ class Team(models.Model):
         choices=FIRST_PROGRAM,
         default=UNSPECIFIED,
         validators=[validate_first_program],
-        help_text="Enter the FIRST program that the team participate in."
+        help_text="Enter the FIRST program of your team."
     )
     username = models.CharField(max_length=200, default="")
     team_name = models.CharField(max_length=200, help_text="Enter the name of your team.")
-    team_number = models.IntegerField(blank=True, null=True, help_text="Enter the team of your team. Prospective teams, established jFLL, or established FLL teams can leave the field blank.")
+    team_number = models.IntegerField(blank=True, null=True,
+        help_text="Enter the team number of your team. Prospective teams, established jFLL, or established FLL teams may leave the field blank.")
     SCHOOL = 'S'
     CLUB_4H = 'H'
     BOY_SCOUT = 'B'
@@ -263,30 +320,37 @@ class Team(models.Model):
         validators=[validate_team_type],
         help_text="Enter the type of association that your team is part of.  School-based teams typically restrict membership to children living in the school district."
     )
-    school_district_name = models.CharField(max_length=200, blank=True, null=True, help_text="Enter the name of your school district if your team is a school-based team. Otherwise, leave the field blank.")
-    zip_code = models.PositiveSmallIntegerField(validators=[validate_zip_code], help_text="5 digit ZIP code of where you meet.")
-    year_founded = models.PositiveSmallIntegerField(blank=True, null=True, help_text="Enter the year that your team was founded. Leave field blank for prospective teams.")
-    description = models.TextField(max_length=2000, help_text="Enter a brief team's description and include your team's objectives. Write description to read as a paragraph.")
-    achievement = models.TextField(max_length=1000, help_text="Describe your recent achievements. Write description to read as a paragraph.")
-    web_site = models.URLField(max_length=200, blank=True, null=True, help_text="Enter the URL of your team online presence.")
-    # what is the team looking for
-    looking_for_teammate = models.BooleanField(default=True, help_text="Select if you are actively looking for new teammates. Only then will you receive messages from prospective team members.")
-    prospective_teammate_profile = models.CharField(max_length=200, blank=True, null=True, help_text="Optional description of the profile of prospective teammates.")
-    looking_to_mentor_another_team = models.BooleanField(default=False, help_text="Select if you are interested in mentoring another team. Only then will you receive messages from prospective teams.")
-    prospective_team_profile = models.CharField(max_length=200, blank=True, null=True, help_text="Optional description of the profile of prospective teams that you are interested in mentoring.")
-    looking_for_mentorship = models.BooleanField(default=False, help_text="Select if you are interested being mentored by another team. Only then will you receive message from prospective expert teams.")
-    help_request = models.CharField(max_length=200, blank=True, null=True, help_text="Optional description of the expertise you would like to get help with.")
-    # stats
-    first_update = models.DateField(auto_now_add=True)
-    last_update = models.DateField(auto_now=True)
-    update_count = models.PositiveIntegerField(default=0)
-    looking_request_count = models.PositiveIntegerField(default=0)
-    requested_count = models.PositiveIntegerField(default=0)
-    #cached data
+    school_district_name = models.CharField(max_length=200, blank=True, null=True,
+        help_text="Enter the name of your school district if your team is a school-based team. Otherwise, leave the field blank.")
+    year_founded = models.PositiveSmallIntegerField(blank=True, null=True,
+        help_text="Enter the year that your team was founded. Leave field blank for prospective teams.")
+    description = models.TextField(max_length=2000,
+        help_text="Enter a brief team's description and include your team's objectives. Text shoud read as a paragraph.")
+    achievement = models.TextField(max_length=1000,
+        help_text="Describe your recent achievements. Text should read as a paragraph.")
+    web_site = models.URLField(max_length=200, blank=True, null=True,
+        help_text="Enter the URL of your team online presence.")
+    zip_code = models.PositiveSmallIntegerField(validators=[validate_zip_code],
+        help_text="5 digit ZIP code of where you meet.")
+    # computed location info
     town_name = models.CharField(max_length=50, blank=True, default="")
     state_name = models.CharField(max_length=2, blank=True, default="")
     latitude = models.FloatField(default=0.0, blank=True)
-    longitude = models.FloatField(default=0.0, blank=True)
+    longitude = models.FloatField(default=0.0, blank=True)    
+    # what is the team looking for
+    looking_for_teammate = models.BooleanField(default=True,
+        help_text="Select if you are actively looking for new teammates. Only then will you receive messages from prospective team members.")
+    prospective_teammate_profile = models.CharField(max_length=200, blank=True, null=True,
+        help_text="Optional description of the profile of prospective teammates.")
+    looking_to_mentor_another_team = models.BooleanField(default=False,
+        help_text="Select if you are interested in mentoring another team. Only then will you receive messages from prospective teams.")
+    prospective_team_profile = models.CharField(max_length=200, blank=True, null=True,
+        help_text="Optional description of the profile of prospective teams that you are interested in mentoring.")
+    looking_for_mentorship = models.BooleanField(default=False,
+        help_text="Select if you are interested being mentored by another team. Only then will you receive message from prospective expert teams.")
+    help_request = models.CharField(max_length=200, blank=True, null=True,
+        help_text="Optional description of the expertise you would like to get help with.")
+    
     #methods
     def __str__(self):
         return "%s-%s-%s" %(self.username, self.team_number_description(), self.team_name)
@@ -326,23 +390,18 @@ class Team(models.Model):
             str += "not currently looking for new teammates or mentoring opportunities.  "
         return str
 
-    def info_cleanup(self, username, is_new):
-        print("update info for %s" % username)
+    def update_info(self, username):
+        print("update team info for %s" % username)
         self.username = username
-        self.last_update = datetime.datetime.now()
-        if is_new:
-            self.first_update = self.last_update
-            self.update_count = 0
-        self.update_count += 1
         info = ZipcodeSearchEngine().by_zipcode(self.zip_code)
         self.town_name = info.City
         self.state_name = info.State
         self.latitude = info.Latitude
         self.longitude = info.Longitude
-        
-    def distance_from(self, other_latitude, other_longitude):
-        return great_circle([self.latitude, self.longitude], [other_latitude, other_longitude])
 
+    def distance_from(self, other_latitude, other_longitude):
+        return great_circle([self.latitude, self.longitude], [other_latitude, other_longitude])        
+        
 class TeamForm(ModelForm):
     class Meta:
         model = Team
@@ -391,17 +450,20 @@ class Invite(models.Model):
     
     @classmethod
     def create(cls, invitor_username, prospective_username, type):
-        invite = cls(invitor_username=invitor_username, prospective_username=prospective_username, type=type)
+        invite = cls(invitor_username=invitor_username,
+            prospective_username=prospective_username, type=type)
         return invite
 
     @classmethod
     def find_identical_pending_invite(cls, invitor_username, prospective_username, type):
         # does same invite already exists?
-        qs = cls.objects.filter(invitor_username=invitor_username, prospective_username=prospective_username, type=type)
+        qs = cls.objects.filter(invitor_username=invitor_username,
+            prospective_username=prospective_username, type=type)
         for i in qs:
             # ignore completed requests
             if not i.completed():
-                print("find request that was not completed %s %s" % (invitor_username, prospective_username))
+                print("find request that was not completed %s %s" % (invitor_username,
+                    prospective_username))
                 return i
         return None
 

@@ -3,55 +3,48 @@ from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.core.mail.message import EmailMessage
+from django.contrib.auth.models import User
 from uszipcode import ZipcodeSearchEngine
 from uszipcode import ZipcodeSearchEngine
 import datetime
 
 
 # Create your views here.
-from .models import Team, TeamForm, Person, PersonForm, Invite
-from .models import has_team, has_person, invite_expiration_in_days, max_initiated_invite
+from .models import Profile, Team, Person, Invite
+from .models import TeamForm, PersonForm
+from .models import invite_expiration_in_days, max_initiated_invite
 
 ################################################################################
 # general
 # dummy response return HttpResponse("Hello.")
 
-IS_ANONYMOUS = 0
-IS_PERSON = 1
-IS_TEAM = 2
-IS_UNINIT_ENTITY = 3
+ANONYMOUS = 'A'
 
 def classify(request):
     if not request.user.is_authenticated:
-        return IS_ANONYMOUS
+        return ANONYMOUS
     # registered
-    username = request.user.username
-    if has_person(username):
-        return IS_PERSON
-    if has_team(username):
-        return IS_TEAM
-    # registered, but neiter... should set now
-    return IS_UNINIT_ENTITY
+    return request.user.profile.type
 
 def type_in_context(type):
-    if type == IS_PERSON:
+    if type == Profile.PERSON:
         return {'is_person' : True}
-    elif type == IS_TEAM:
+    elif type == Profile.TEAM:
         return {'is_team' : True}
-    elif type == IS_UNINIT_ENTITY:
+    elif type == Profile.UNSPECIFIED:
         return {'is_uninit' : True}
     else:
         return {'anonymous' : True}
 
 def index(request):
     type = classify(request)
-    if type == IS_UNINIT_ENTITY:
+    if type == Profile.UNSPECIFIED:
         return render(request, 'match/settings.html', {'is_uninit' : True})
     return render(request, 'match/index.html', {})
 
 def search(request):
     type = classify(request)
-    if type == IS_UNINIT_ENTITY:
+    if type == Profile.UNSPECIFIED:
         return render(request, 'match/settings.html', {'is_uninit' : True})
     context = type_in_context(type)
     return render(request, 'match/search.html', context)
@@ -73,44 +66,45 @@ max_travel_distance = 200
 @login_required
 def person_profile(request):
     username = request.user.username
-    # person cannot also have a team profile
-    if has_team(username):
-        return team_profile(request)
-    # try to get person profile from database
-    try:
-        #has a person
-        person = Person.objects.get(username=username)
+    if request.user.profile.is_person():
+        person = request.user.profile.get_person()
         if request.method == "POST":
-            # posted a new form, inspect
+            # posted a new form for an existing person, inspect
             form = PersonForm(request.POST, instance=person)
             if form.is_valid():
                 person = form.save(commit=False)
-                person.info_cleanup(username, False)
+                person.update_info(username)
                 person.save()
+                request.user.profile.update_info()
+                request.user.profile.save()
                 return settings(request)
         else:
-            # comming here before recieving a post
+            # post a form for an existing person 
             form = PersonForm(instance=person)
         return render(request, 'match/person_profile.html', {'form': form})
-        
-    except:
+    elif request.user.profile.is_unspecified():
         # does not have a person
         if request.method == "POST":
-            # posted a new form, inspect
+            # posted a new form for a new person, inspect
             form = PersonForm(request.POST)
             if form.is_valid():
                 person = form.save(commit=False)
-                person.info_cleanup(username, True)
+                person.update_info(username)
                 person.save()
+                request.user.profile.init_info(Profile.PERSON, person.id)                                
+                request.user.profile.save()                
                 return settings(request)
         else:
             # comming here first, get the post
             form = PersonForm()
         return render(request, 'match/person_profile.html', {'form': form})
+    else:
+        raise Http404("Try to update person profile for a non-person.")
+
 
 def person_viewing_team(request, tusername):
     pusername = request.user.username
-    person = get_object_or_404(Person, username=pusername)
+    person = request.user.profile.get_person()
     prospective_team = get_object_or_404(Team, username=tusername)
     can_invite = True
     if Invite.find_identical_pending_invite(pusername, tusername, Invite.P2T):
@@ -125,7 +119,7 @@ def person_viewing_team(request, tusername):
 @login_required
 def person_inviting_team(request, tusername):
     pusername = request.user.username
-    person = get_object_or_404(Person, username=pusername)
+    person = request.user.profile.get_person()
     prospective_team = get_object_or_404(Team, username=tusername)
     greeting = "Hi Team %s," % prospective_team.team_name
     par1 = "%s" % person.child_description()
@@ -178,12 +172,11 @@ def render_person_searching_teams(request, zipcode, dist, latitude, longitude,
 
 def person_searching_teams(request):
     if request.user.is_authenticated:
-        person = has_person(request.user.username)
-        if person != None:
-            return render_person_searching_teams(request, person.zip_code, 15,
-                person.latitude, person.longitude, True,
-                person.interested_in_jFLL, person.interested_in_FLL, person.interested_in_FTC,
-                person.interested_in_FRC, None)
+        person = request.user.profile.get_person()
+        return render_person_searching_teams(request, person.zip_code, 15,
+            person.latitude, person.longitude, True,
+            person.interested_in_jFLL, person.interested_in_FLL, person.interested_in_FTC,
+            person.interested_in_FRC, None)
     return render_person_searching_teams(request, 10000, 15, 0.0, 0.0,
         True, False, False, False, False, "")    
 
@@ -232,45 +225,46 @@ def person_searching_teams_result(request):
 @login_required
 def team_profile(request):
     username = request.user.username
-    if has_person(username):
-        return person_profile(request)
-    # try to get team profile from database
-    try:
-        #has a team
-        team = Team.objects.get(username=username)
+    if request.user.profile.is_team():
+        team = request.user.profile.get_team()
         if request.method == "POST":
-            # posted a new form, inspect
+            # posted a new form for an existing team, inspect
             form = TeamForm(request.POST, instance=team)
             if form.is_valid():
                 team = form.save(commit=False)
-                team.info_cleanup(username, False)
+                team.update_info(username)
                 team.save()
+                request.user.profile.update_info()                
+                request.user.profile.save()                
                 return settings(request)
         else:
-            # comming here before recieving a post
+            # post a form for an existing team 
             form = TeamForm(instance=team)
         return render(request, 'match/team_profile.html', {'form': form})
-        
-    except:
+    elif request.user.profile.is_unspecified():
         # does not have a team
         if request.method == "POST":
-            # posted a new form, inspect
+            # posted a new form for a new team, inspect
             form = TeamForm(request.POST)
             if form.is_valid():
                 team = form.save(commit=False)
-                team.info_cleanup(username, True)
+                team.update_info(username)
                 team.save()
+                request.user.profile.init_info(Profile.TEAM, team.id)                
+                request.user.profile.save()                
                 return settings(request)
         else:
             # comming here first, get the post
             form = TeamForm()
         return render(request, 'match/team_profile.html', {'form': form})
+    else:
+        raise Http404("Try to update team profile for a non-team.")
     
 
 @login_required
 def team_viewing_person(request, pusername):
     tusername = request.user.username
-    team = get_object_or_404(Team, username=tusername)
+    team = request.user.profile.get_team()
     prospective_person = get_object_or_404(Person, username=pusername)
     can_invite = True
     if Invite.find_identical_pending_invite(tusername, pusername, Invite.T2P):
@@ -285,7 +279,7 @@ def team_viewing_person(request, pusername):
 @login_required
 def team_inviting_person(request, pusername):
     tusername = request.user.username
-    team = get_object_or_404(Team, username=tusername)
+    team = request.user.profile.get_team()
     prospective_person = get_object_or_404(Person, username=pusername)
 
     greeting = "Dear prospective teammate's gurdian,"
@@ -334,15 +328,13 @@ def render_team_searching_persons(request, team, dist, error_message):
 
 @login_required
 def team_searching_persons(request):
-    tusername = request.user.username
-    team = get_object_or_404(Team, username=tusername)
+    team = request.user.profile.get_team()
     dist = 15
     return render_team_searching_persons(request, team, dist, "")    
 
 @login_required
 def team_searching_persons_result(request):
-    tusername = request.user.username
-    team = get_object_or_404(Team, username=tusername)
+    team = request.user.profile.get_team()
     # get and normalize dist
     error_message = ""
     dist = int(request.POST['distance'])
@@ -365,8 +357,8 @@ def send_invite(request, invitor, invitee, type):
     par2 = request.POST['par2']
     par3 = request.POST['par3']
     message = request.POST['message']
-    text = "\n\nBegin of message from findmyteam.org user\n\n"
-    text = "%s\n\n%s\n\n%s\n\n" % (greeting, par1, par2)
+    text =  "\n\nBegin of message from findmyteam.org user.\n\n"
+    text += "%s\n\n%s\n\n%s\n\n" % (greeting, par1, par2)
     if par3:
         text += "%s\n\n" % par3
     if message:
@@ -375,8 +367,9 @@ def send_invite(request, invitor, invitee, type):
     # create record
     invite = Invite.create(invitor, invitee, type)
     invite.save()
+    # send email
     id = invite.id
-    text += "\n\nEnd of message from findmyteam.org user"
+    text += "\n\nEnd of message from findmyteam.org user.\n\n"
     text += "You are requested to take one of the following two actions.\n\n"
     text += "  1) If you are interested to learn more and communicate, accept the invite.\n"
     text += "  2) If you are not interested, decline the invite.\n"
@@ -389,6 +382,17 @@ def send_invite(request, invitor, invitee, type):
     email = EmailMessage(subject='Contact request from findmyteam.org',
                          body=text, to=[request.user.email])
     email.send()
+    # update requests
+    try:
+        invitor_profile = User.objects.get(username=invitor).profile
+        invitor_profile.requested_count += 1
+        invitee_profile = User.objects.get(username=invitee).profile
+        invitee_profile.looking_request_count += 1
+        invitor_profile.save()
+        invitee_profile.save()
+    except:
+        Http404("Failed to update request counts.")
+    # complete
     return render(request, 'match/index.html', {'header' : 'Congratulations!',
         'message' : 'Invite sent'}) 
 
@@ -419,7 +423,19 @@ def accept_invite(request, invite_id):
     email.send()
     # mark as accepted
     invite.status = invite.ACCEPTED
+    invite.date_response = datetime.datetime.now()
     invite.save()
+    # update requests
+    try:
+        invitor_profile = User.objects.get(username=invite.invitor_username).profile
+        invitor_profile.accepted_count += 1
+        invitee_profile = User.objects.get(username=invite.prospective_username).profile
+        invitee_profile.accepted_count += 1
+        invitor_profile.save()
+        invitee_profile.save()
+    except:
+        Http404("Failed to update accepted counts.")
+
     return render(request, 'match/index.html', {'header' : 'Congratulations!',
         'message' : 'Congratulation, an email was send to both parties.'})
     
