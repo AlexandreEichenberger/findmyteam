@@ -27,6 +27,8 @@ urlpatterns = [
     url(r'^team_inviting_person/(?P<pusername>[a-zA-Z_]+)/$', views.team_inviting_person, name='team_inviting_person'),
     url(r'^team_searching_persons/$', views.team_searching_persons, name='team_searching_persons'),
     url(r'^team_searching_persons_result/$', views.team_searching_persons_result, name='team_searching_persons_result'),
+    url(r'^team_searching_teams/$', views.team_searching_teams, name='team_searching_teams'),
+    url(r'^team_searching_teams_result/$', views.team_searching_teams_result, name='team_searching_teams_result'),
 
     # organization
     url(r'^org_actions/$', views.org_actions, name='org_actions'),

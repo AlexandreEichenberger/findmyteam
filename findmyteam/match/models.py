@@ -343,11 +343,11 @@ class Team(models.Model):
     prospective_teammate_profile = models.CharField(max_length=200, blank=True, null=True,
         help_text="Optional description of the profile of prospective teammates.")
     looking_to_mentor_another_team = models.BooleanField(default=False,
-        help_text="Select if you are interested in mentoring another team. Only then will you receive messages from prospective teams.")
+        help_text="Select if you are offering to mentor another team. Only then will you receive messages from prospective teams.")
     prospective_team_profile = models.CharField(max_length=200, blank=True, null=True,
         help_text="Optional description of the profile of prospective teams that you are interested in mentoring.")
     looking_for_mentorship = models.BooleanField(default=False,
-        help_text="Select if you are interested being mentored by another team. Only then will you receive message from prospective expert teams.")
+        help_text="Select if you are seeking mentorship by another team. Only then will you receive message from prospective expert teams.")
     help_request = models.CharField(max_length=200, blank=True, null=True,
         help_text="Optional description of the expertise you would like to get help with.")
     

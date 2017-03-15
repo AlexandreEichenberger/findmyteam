@@ -376,6 +376,100 @@ def team_searching_persons_result(request):
     return render_team_searching_persons(request, team, dist, error_message)    
 
 
+####
+
+
+def render_team_searching_teams(request, dist, looking_to_mentor, looking_for_mentorship,
+        jfll, fll, ftc, frc, error_message):
+    team = request.user.profile.get_team()
+    team_list_by_dist = []
+    list_results = False
+    if not error_message and (jfll or fll or ftc or frc):
+        list_results = True
+        # has data, filter by kind
+        qs = Team.objects.exclude(username=team.username)
+        if not looking_to_mentor:
+            qs = qs.exclude(looking_to_mentor_another_team="False")
+        if not looking_for_mentorship:
+            qs = qs.exclude(looking_for_mentorship="False")
+        if not jfll:
+            qs = qs.exclude(first_program=Team.JFLL)
+        if not fll:
+            qs = qs.exclude(first_program=Team.FLL)
+        if not ftc:
+            qs = qs.exclude(first_program=Team.FTC)
+        if not frc:
+            qs = qs.exclude(first_program=Team.FRC)
+        # filter by distance
+        team_list = []
+        dist_list = []
+        for t in qs:
+            d = t.distance_from(team.latitude, team.longitude)
+            if d <= dist:
+                team_list.append(t)
+                dist_list.append(d)
+        # sort list by distance
+        team_list_by_dist = [x for (y,x) in sorted(zip(dist_list, team_list), key=lambda pair: pair[0])]
+    # has team list / or empty
+    return render(request, 'match/team_searching_teams_result.html', {
+        'dist' : dist,
+        'looking_to_mentor' : looking_to_mentor, 'looking_for_mentorship' : looking_for_mentorship,
+        'jfll' : jfll, 'fll' : fll, 'ftc' : ftc, 'frc' : frc,
+        'list_results' : list_results,
+        'team_list_size' : len(team_list_by_dist),
+        'team_list': team_list_by_dist,
+        'error_message' : error_message})
+
+@login_required
+def team_searching_teams(request):
+    team = request.user.profile.get_team()
+    return render_team_searching_teams(request, 50,
+        # if looking to mentor, search teams that are looking for mentorship
+        team.looking_for_mentorship,
+        # if looking to be mentored, search team that are offering mentoring
+        team.looking_to_mentor_another_team, 
+        # default: interested in your own kind of teams
+        team.first_program == Team.JFLL, team.first_program == Team.FLL,
+        team.first_program == Team.FTC,  team.first_program == Team.FRC, 
+        None)
+
+@login_required
+def team_searching_teams_result(request):
+    error_message = ""
+    # get and normalize dist
+    dist = int(request.POST['distance'])
+    if dist == None or dist < 1 or dist > 4*max_travel_distance:
+        error_message += "Must specify a distance between 1 and %s miles.  " % 4*max_travel_distance
+        dist = 50
+    jfll = False
+    if "jfll" in request.POST:
+        jfll = True
+    fll = False
+    if "fll" in request.POST:
+        fll = True
+    ftc = False
+    if "ftc" in request.POST:
+        ftc = True
+    frc = False
+    if "frc" in request.POST:
+        frc = True
+    if not (jfll or fll or ftc or frc):
+        error_message += "Must select at least one of jFLL, FLL, FTC, or FRC type of teams.  "
+    looking_to_mentor = False
+    if "looking_to_mentor" in request.POST:
+        looking_to_mentor = True
+    looking_for_mentorship = False
+    if "looking_for_mentorship" in request.POST:
+        looking_for_mentorship = True
+    return render_team_searching_teams(request, dist, looking_to_mentor, looking_for_mentorship,
+                                       jfll, fll, ftc, frc, error_message)    
+
+
+
+####
+
+
+
 ################################################################################
 # org
 

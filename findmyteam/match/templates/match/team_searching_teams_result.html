@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if list_results %}
+  {% if team_list_size == 0 %}
+    <h2>
+    No teams were found; please expand your search terms.
+    </h2>
+  {% else %}
+    <h2>
+    Nearby prospective team{{team_list_size|pluralize}}:
+    </h2>
+    {% for prospective_team in team_list %}
+      <li> {{ prospective_team.team_description }}
+         <a href="{% url 'match:team_viewing_team' prospective_team.username %}">Learn more.</a>
+      </li>
+    {% endfor %}
+  {% endif %}  
+{% endif %}  
+
+ 
+<h2>
+Search terms:
+</h2>
+
+{% if error_message %} <ul class="errorlist"> {{ error_message }} </ul>  {% endif %}    
+
+<form action={% url 'match:team_searching_teams_result' %} method="post">
+{% csrf_token %}
+
+<li>distance: <input type="number" name="distance" value={{dist}}></li>
+
+<li><input type="checkbox" name="looking_to_mentor" value="looking_to_mentor"
+  {% if looking_to_mentor %} checked {% endif %}  
+ > teams offering to mentor another team</li>
+ 
+<li><input type="checkbox" name="looking_for_mentorship" value="looking_for_mentorship"
+  {% if looking_for_mentorship %} checked {% endif %}  
+  > teams seeking mentorship from an expert team</li>
+
+<li><input type="checkbox" name="jfll" value="jfll"
+  {% if jfll %} checked {% endif %}  
+   > interested in jFLL teams</li>
+   
+<li><input type="checkbox" name="fll" value="fll"
+  {% if fll %} checked {% endif %}  
+    > interested in FLL teams</li>
+    
+<li><input type="checkbox" name="ftc" value="ftc"
+  {% if ftc %} checked {% endif %}  
+     > interested in FTC teams</li>
+     
+<li><input type="checkbox" name="frc" value="frc"
+  {% if frc%} checked {% endif %}  
+  > interested in FRC teams</li>
+
+<input type="submit" value="Submit">
+</form>
+
+{% endblock %}
