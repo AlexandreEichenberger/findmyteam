@@ -29,11 +29,11 @@
       
 </nav>
 <ul class="topnav_ul">
-  <li class="topnav_li"> <a class="topnav_a" href="{% url 'match:programs' %}">Programs</a></li>
   <li class="topnav_li"> <a class="topnav_a" href="/match">Home</a></li>
+  <li class="topnav_li"> <a class="topnav_a" href="{% url 'match:programs' %}">Programs</a></li>
   <li class="topnav_li"> <a class="topnav_a" href="{% url 'match:settings' %}">Profile</a></li>
   <li class="topnav_li"> <a class="topnav_a" href="{% url 'match:search' %}">Search</a></li>
-  <li class="topnav_li" style="float:right"> <a class="topnav_a" href="/match.about.html">About</a></li>
+  <li class="topnav_li" style="float:right"> <a class="topnav_a" href="{% url 'match:about' %}"">Mission</a></li>
 </ul>
 <br>
 </head>
@@ -50,9 +50,13 @@
   <br>
   <div class="neapolitan"><br>
 
-Supported by Robocracy
-  <a href="http://ftcrobocracy.org">web</a>
+<span class="footer_txt"> Powered by Team Robocracy </span>
+<img class="footer_img" src="{% static 'match/robocracy_small.gif' %}" alt="logo image">
+<span class="footer_txt">
+    FTC 9773. Find us on the
+  <a href="http://ftcrobocracy.org">web</a> or on
   <a href="https://www.facebook.com/ftcrobocracy9773">facebook</a>
+</span>  
 </footer>
 
 </body>

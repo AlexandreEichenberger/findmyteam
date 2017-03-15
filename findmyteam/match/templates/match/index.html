@@ -1,20 +1,40 @@
 {% extends "base.html" %}
 {% block content %}
+{% load static %}
 
+<center>
+<img class="index_img" src="{% static 'match/index.png' %}" alt="background image"\>
+</center>
 
 {% if message %}
-<h2>
-{{ header }}
-</h2>
-<ul> {{ message }} </ul> <br>
+  {% if header %}
+    <h2>
+    {{ header }}
+    </h2>
+  {% endif %}
+  <ul class="errorlist"> {{ message }} </ul> <br>
 {% endif %}
 
-<h2>
-Actions
-</h2>
+<ul class="index_ul">
+  <li class="index_li" style="background-color:blue;">
+  <a class="index_a" href="{% url 'match:team_actions' %}">
+  <h2>Teams</h2>
+  recruit members, find mentors, and explore outreach opportunities.</a></li>
 
-<li> <a href="{% url 'match:person_searching_teams' %}">Search teams.</a></li>
-<li> <a href="{% url 'match:team_searching_persons' %}">Search people.</a></li>
+  <li class="index_li" style="background-color:red;">
+  <a class="index_a" href="{% url 'match:person_actions' %}">
+  <h2>People</h2>
+  explores jFLL, FLL, FTC, and FRC teams in your area.
+  </a></li>
+
+  <li class="index_li "style="background-color:green;">
+  <a class="index_a"
+  href="{% url 'match:org_actions' %}">
+  <h2>Organization</h2>
+  offer outreach opportunities to further the reach of STEM in your
+  local area.</a></li>
+</ul>
+
 
 
 {% endblock %}

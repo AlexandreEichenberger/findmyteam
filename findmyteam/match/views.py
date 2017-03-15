@@ -36,10 +36,15 @@ def type_in_context(type):
     else:
         return {'anonymous' : True}
 
+################################################################################
+# global responses
+
 def index(request):
     type = classify(request)
     if type == Profile.UNSPECIFIED:
         return render(request, 'match/settings.html', {'is_uninit' : True})
+    if request.user.is_authenticated:
+        return render(request, 'match/index.html', {'authenticated' : True})
     return render(request, 'match/index.html', {})
 
 def search(request):
@@ -47,10 +52,16 @@ def search(request):
     if type == Profile.UNSPECIFIED:
         return render(request, 'match/settings.html', {'is_uninit' : True})
     context = type_in_context(type)
-    return render(request, 'match/search.html', context)
+    if type == ANONYMOUS:
+        # anonymous: let search teams as if a person
+        context = {'is_person' : True} 
+    return render(request, 'match/actions.html', context)
 
 def programs(request):
     return render(request, 'match/programs.html', {})
+
+def about(request):
+    return render(request, 'match/about.html', {})
 
 @login_required
 def settings(request):
@@ -63,6 +74,17 @@ max_travel_distance = 200
 ################################################################################
 # person
 
+def person_actions(request):
+    if request.user.is_authenticated:
+        if request.user.profile.is_person():
+            return render(request, 'match/actions.html', {'is_person' : True})
+        else:
+            return render(request, 'match/index.html', {'authenticated' : True,
+                'message': "People pages can only be accessed by accounts registered as persons."})
+    # not authenticated
+    return render(request, 'match/actions.html', {'register' : True,  'login' : True,
+        'is_person' : True})
+    
 @login_required
 def person_profile(request):
     username = request.user.username
@@ -177,7 +199,7 @@ def person_searching_teams(request):
             person.latitude, person.longitude, True,
             person.interested_in_jFLL, person.interested_in_FLL, person.interested_in_FTC,
             person.interested_in_FRC, None)
-    return render_person_searching_teams(request, 10000, 15, 0.0, 0.0,
+    return render_person_searching_teams(request, 0, 15, 0.0, 0.0,
         True, False, False, False, False, "")    
 
 def person_searching_teams_result(request):
@@ -221,6 +243,16 @@ def person_searching_teams_result(request):
 
 ################################################################################
 # teams
+
+def team_actions(request):
+    if request.user.is_authenticated:
+        if request.user.profile.is_team():
+            return render(request, 'match/actions.html', {'is_team' : True})
+        else:
+            return render(request, 'match/index.html', {'authenticated' : True,
+                'message': "Team pages can only be accessed by accounts registered as teams."})
+    # not authenticated
+    return render(request, 'match/actions.html', {'register' : True,  'login' : True})
 
 @login_required
 def team_profile(request):
@@ -343,6 +375,14 @@ def team_searching_persons_result(request):
         dist = 15
     return render_team_searching_persons(request, team, dist, error_message)    
 
+
+################################################################################
+# org
+
+def org_actions(request):
+    context = {}
+    context = {'message' : "Oranizations are not supported yet at this time."}
+    return render(request, 'match/index.html', context)
 
 
 ################################################################################

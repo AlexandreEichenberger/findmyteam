@@ -80,6 +80,36 @@
     background-color: #4CAF50;
 }
 
+/* format for index */
+
+.index_img {
+    width: 80%;
+    max-width: 1200px;
+}
+
+.index_ul {
+    list-style-type: none;
+    margin: 0;
+    /*padding: 2%; */
+    overflow: hidden;
+}
+
+.index_li {
+    float: left;
+    margin: 10px 10px;
+    /*padding: 30px 30px; */
+    width:30%
+}
+
+.index_a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 10px 10px;
+    text-decoration: none;
+}
+
+
 /* format for settings */
 
 .choices_ul {
@@ -105,6 +135,27 @@
 
 .choices_li a:hover:not(.active) {
     background-color: #111;
+}
+
+/* misc */
+
+.wrap_img {
+    float: left;
+    margin: 10px;
+    width: 25%;
+    width-max: 150px;
+    height-max: 50px;
+    vertical-align: top;
+}
+
+/* footer */
+
+.footer_img {
+    vertical-align: middle;
+    width: 25px;
+}
+
+.footer_txt {
 }
 
 /* errror from accounts */

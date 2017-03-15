@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+{% if message %}
+<h2>
+{{ header }}
+</h2>
+<ul class="errorlist"> {{ message }} </ul> <br>
+{% endif %}
+
+<ul  class='choices_ul'>
+
+{%if login %} 
+  <li class='choices_li'>
+  <a class='choices_a'  href="/accounts/login">login</a>
+  </li>
+{% endif %}
+
+{%if register %} 
+  <li class='choices_li'>
+  <a class='choices_a'  href="/accounts/signup">register</a>
+  </li>
+{% endif %}
+
+{%if is_person %} 
+  <li class='choices_li' style="background-color:red;">
+  <a class='choices_a'  href="{% url 'match:person_searching_teams' %}">search teams </a>
+  </li>
+{% endif %}
+
+{%if is_team %} 
+  <li class='choices_li' style="background-color:blue;">
+  <a class='choices_a'  href="{% url 'match:team_searching_persons' %}">search persons</a>
+  </li>
+{% endif %}
+
+</ul>
+    
+
+
+{% endblock %}
