@@ -15,11 +15,11 @@
       <th class="top_links">
          {% if user.is_authenticated %}
            {{ user.username }}<br>
-           <a id="settings" href="{% url 'match:settings' %}">profile</a><br>
-           <a id="logout" href="/accounts/logout">logout</a>
+           <a class="top_a" id="settings" href="{% url 'match:settings' %}">profile</a><br>
+           <a class="top_a" id="logout" href="/accounts/logout">logout</a>
          {% else %}
-           <a id="login" href="/accounts/login">login</a><br>
-           <a id="signup" href="/accounts/signup">register</a>
+           <a class="top_a" id="login" href="/accounts/login">login</a><br>
+           <a class="top_a" id="signup" href="/accounts/signup">register</a>
          {% endif %}
         </th>
     </tr>

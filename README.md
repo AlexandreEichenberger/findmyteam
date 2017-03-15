@@ -1,5 +1,6 @@
 #findmyteam
 
+#https://www.python.org/download/
 #https://docs.djangoproject.com/en/1.10/topics/install/#installing-official-release
 pip install Django
 

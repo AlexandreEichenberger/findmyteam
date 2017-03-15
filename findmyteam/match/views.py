@@ -203,7 +203,6 @@ def person_searching_teams(request):
         True, False, False, False, False, "")    
 
 def person_searching_teams_result(request):
-    person = None
     error_message = ""
     # get and normalize dist
     dist = int(request.POST['distance'])

@@ -64,6 +64,11 @@
     float: left;
 }
 
+.top_a {
+    text-decoration: none;
+    color: black;
+}
+
 .topnav_a {
     display: block;
     color: white;
@@ -135,6 +140,13 @@
 
 .choices_li a:hover:not(.active) {
     background-color: #111;
+}
+
+/* forms */
+
+.helptext {
+    color: black;
+    font-style: italic;
 }
 
 /* misc */

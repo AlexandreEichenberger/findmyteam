@@ -8,7 +8,7 @@
     </h2>
   {% else %}
     <h2>
-    Nearby prospective team{{team_list_size|pluralize}}:
+    Nearby team{{team_list_size|pluralize}}:
     </h2>
     {% for prospective_team in team_list %}
       <li> {{ prospective_team.team_description }}
@@ -30,7 +30,7 @@ Search terms:
 
 <li>zip code: <input type="number" name="zipcode" value={{zipcode}}></li>
 
-<li>distance: <input type="number" name="distance" value={{dist}}></li>
+<li>distance (miles): <input type="number" name="distance" value={{dist}}></li>
 
 <li><input type="checkbox" name="new_members" value="new_members"
   {% if new_members %} checked {% endif %}  
@@ -52,7 +52,7 @@ Search terms:
   {% if frc%} checked {% endif %}  
   > FRC teams</li>
 
-<input type="submit" value="Submit">
+<input type="submit" value="Search">
 </form>
 
 {% endblock %}
