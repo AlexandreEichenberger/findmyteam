@@ -423,8 +423,8 @@ class Invite(models.Model):
     INVITE_TYPE = (
         (P2T, 'person to team'),
         (T2P, 'team to person'),
-        (T2M, 'new team to mentor team'),
-        (M2T, 'mentor team to new team'),
+        (T2M, 'team seeking mentorship'),
+        (M2T, 'team offering to mentor a team'),
     )
     # invite type
     type = models.CharField(max_length=1, choices=INVITE_TYPE, default=P2T)

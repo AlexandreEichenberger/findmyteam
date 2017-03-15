@@ -25,6 +25,8 @@ urlpatterns = [
     url(r'^team_profile/$', views.team_profile, name='team_profile'),
     url(r'^team_viewing_person/(?P<pusername>[a-zA-Z_]+)/$', views.team_viewing_person, name='team_viewing_person'),
     url(r'^team_inviting_person/(?P<pusername>[a-zA-Z_]+)/$', views.team_inviting_person, name='team_inviting_person'),
+    url(r'^team_viewing_team/(?P<prospective_tusername>[a-zA-Z_]+)/$', views.team_viewing_team, name='team_viewing_team'),
+    url(r'^team_inviting_team/(?P<prospective_tusername>[a-zA-Z_]+)/(?P<type>[HM])/$', views.team_inviting_team, name='team_inviting_team'),
     url(r'^team_searching_persons/$', views.team_searching_persons, name='team_searching_persons'),
     url(r'^team_searching_persons_result/$', views.team_searching_persons_result, name='team_searching_persons_result'),
     url(r'^team_searching_teams/$', views.team_searching_teams, name='team_searching_teams'),
@@ -36,6 +38,6 @@ urlpatterns = [
     # invite
     url(r'^(?P<invitor>[a-zA-Z_]+)/(?P<invitee>[a-zA-Z_]+)/(?P<type>[a-zA-Z_]+)/send_invite/$', views.send_invite, name='send_invite'),
     url(r'^(?P<invite_id>[0-9]+)/accept_invite/$', views.accept_invite, name='accept_invite'),
-    url(r'^(?P<invite_id>[0-9]+)/decline_invite/$', views.accept_invite, name='accept_invite'),
+    url(r'^(?P<invite_id>[0-9]+)/decline_invite/$', views.decline_invite, name='decline_invite'),
 
 ]

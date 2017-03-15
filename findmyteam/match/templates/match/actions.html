@@ -24,13 +24,17 @@
 {% endif %}
 
 {%if is_person %} 
-  <li class='choices_li' style="background-color:red;">
+  <li class='choices_li' style="background-color:blue;">
   <a class='choices_a'  href="{% url 'match:person_searching_teams' %}">search teams </a>
   </li>
 {% endif %}
 
-{%if is_team %} 
+{%if is_team %}
   <li class='choices_li' style="background-color:blue;">
+  <a class='choices_a'  href="{% url 'match:team_searching_teams' %}">search teams</a>
+  </li>
+
+  <li class='choices_li' style="background-color:red;">
   <a class='choices_a'  href="{% url 'match:team_searching_persons' %}">search persons</a>
   </li>
 {% endif %}

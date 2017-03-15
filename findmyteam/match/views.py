@@ -134,8 +134,8 @@ def person_viewing_team(request, tusername):
     too_many_invite = ""
     if Invite.pending_invite_num(pusername) > max_initiated_invite:
         too_many_invite = "Person cannot invite prospective teams at this time as you have exceeeded the maximum of %d pending invites; invites expire within %d days" % (max_initiated_invite, invite_expiration_in_days)
-    return render(request, 'match/person_viewing_team.html', {
-        'prospective_team' : prospective_team, 'can_invite' : can_invite,
+    return render(request, 'match/viewing_team.html', {
+        'prospective_team' : prospective_team, 'person_can_invite' : can_invite,
         'too_many_invite' : too_many_invite })
 
 @login_required
@@ -291,7 +291,9 @@ def team_profile(request):
         return render(request, 'match/team_profile.html', {'form': form})
     else:
         raise Http404("Try to update team profile for a non-team.")
+
     
+#### team interested in teammates
 
 @login_required
 def team_viewing_person(request, pusername):
@@ -315,8 +317,8 @@ def team_inviting_person(request, pusername):
     prospective_person = get_object_or_404(Person, username=pusername)
 
     greeting = "Dear prospective teammate's gurdian,"
-    par1  = "%s" % team.team_description()
-    par1 += "Our team is looking for teammates and we are hoping that your child will consider us."
+    par1  = "Our team is looking for teammates and we are hoping that your child will consider us.  "
+    par1 += team.team_description()
     par2  = "We have described our team as follow.  %s.  " % team.description
     if team.achievement:
         par2 += "And here are our recent achievements.  %s." % team.achievement
@@ -376,8 +378,7 @@ def team_searching_persons_result(request):
     return render_team_searching_persons(request, team, dist, error_message)    
 
 
-####
-
+#### team interested in other teams
 
 def render_team_searching_teams(request, dist, looking_to_mentor, looking_for_mentorship,
         jfll, fll, ftc, frc, error_message):
@@ -464,9 +465,54 @@ def team_searching_teams_result(request):
     return render_team_searching_teams(request, dist, looking_to_mentor, looking_for_mentorship,
                                        jfll, fll, ftc, frc, error_message)    
 
+@login_required
+def team_viewing_team(request, prospective_tusername):
+    tusername = request.user.username
+    team = request.user.profile.get_team()
+    prospective_team = get_object_or_404(Team, username=prospective_tusername)
+    can_invite_m2t = True
+    if Invite.find_identical_pending_invite(tusername, prospective_tusername, Invite.M2T):
+        can_invite_m2t = False
+    if not prospective_team.looking_for_mentorship:
+        can_invite_m2t = False        
+    can_invite_t2m = True
+    if Invite.find_identical_pending_invite(tusername, prospective_tusername, Invite.T2M):
+        can_invite_t2m = False
+    if not prospective_team.looking_to_mentor_another_team:
+        can_invite_t2m = False
+    too_many_invite = ""
+    if Invite.pending_invite_num(tusername) > max_initiated_invite:
+        too_many_invite = "Team cannot invite prospective teams at this time as you have exceeeded the maximum of %d pending invites; invites expire within %d days" % (max_initiated_invite, invite_expiration_in_days)
+    return render(request, 'match/viewing_team.html', {
+        'prospective_team' : prospective_team,
+        'team_can_invite_m2t' : can_invite_m2t,
+        'team_can_invite_t2m' : can_invite_t2m,
+        'too_many_invite' : too_many_invite })
+
+@login_required
+def team_inviting_team(request, prospective_tusername, type):
+    tusername = request.user.username
+    team = request.user.profile.get_team()
+    prospective_team = get_object_or_404(Team, username=prospective_tusername)
+    looking_for_text = ""
+    greeting = "Dear prospective team,"
+    par1  = ""
+    if type == Invite.M2T:
+        par1 += "Our team is offering mentorship to new teams and we are hoping that your will consider us.  "
+    else:
+        par1 += "Our team is seeking mentorship from experienced teams and we are hoping that your will consider us.  "
+    par1 += team.team_description()
+    par2  = "We have described our team as follow.  %s.  " % team.description
+    if team.achievement:
+        par2 += "And here are our recent achievements.  %s." % team.achievement
+    par3  = ""
+    if team.web_site:
+        par3 = "You will find further information on our web site: %s" % team.web_site
+    return render(request, 'match/show_invite.html', {'invitor' : tusername,
+        'invitee' : prospective_tusername, 'type' : type, 'greeting' : greeting,
+        'par1' : par1, 'par2' : par2, 'par3' : par3})
 
 
-####
 
 
 
@@ -491,8 +537,7 @@ def send_invite(request, invitor, invitee, type):
     par2 = request.POST['par2']
     par3 = request.POST['par3']
     message = request.POST['message']
-    text =  "\n\nBegin of message from findmyteam.org user.\n\n"
-    text += "%s\n\n%s\n\n%s\n\n" % (greeting, par1, par2)
+    text = "%s\n\n%s\n\n%s\n\n" % (greeting, par1, par2)
     if par3:
         text += "%s\n\n" % par3
     if message:
@@ -576,6 +621,31 @@ def accept_invite(request, invite_id):
 
 @login_required
 def decline_invite(request, invite_id):
+    # locate invite
+    invite = get_object_or_404(Invite, id=invite_id)
+    # make sure the invite was addressed to us, and is still current
+    if invite.prospective_username != request.user.username:
+        return render(request, 'match/index.html', { 'header' : 'Error!', 
+            'message' : 'Responding to someone else\'s invite; ignore.'})
+    if invite.completed():
+        return render(request, 'match/index.html', { 'header' : 'Error!',
+            'message' : 'Responding to an expired invite; ignore.'})
+    tupple = invite.email_and_name_pairs()
+    if not tupple:
+        return render(request, 'match/index.html', {'header' : 'Error!', 
+            'message' : 'Failed to load info; failure.'})
+    [email1, name1, email2, name2] = tupple
+    # send email to invitor
+    text =  "\n\nDear %s,\n\n" % name1
+    text += "Sorry, you sent an invite that was declined. Try again with another person or team.\n\n"
+    text += "Thanks for using findmyteam.org!\nfindmyteam.org powered by Team Robocracy\n\n"
+    email = EmailMessage(subject="Declined invite from findmyteam.org", body=text, to=[email1])
+    email.send()
+    # mark as accepted
+    invite.status = invite.DECLINED
+    invite.date_response = datetime.datetime.now()
+    invite.save()
+
     return render(request, 'match/index.html',
                       {'message' : 'Your invitation has been recoreded as declined.'})
 

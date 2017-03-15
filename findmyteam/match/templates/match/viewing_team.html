@@ -28,12 +28,30 @@ Team Achievements
   {{ prospective_team.achievement}}
 </ul>
 
-{% if can_invite %}
+{% if person_can_invite %}
 <h3>
   Interested?
 </h3>
 <ul>
   <a href="{% url 'match:person_inviting_team' prospective_team.username %}">Ask if prospective team is also interested.</a>
+</ul>
+{% endif %}
+
+{% if team_can_invite_m2t %}
+<h3>
+  Interested in mentoring this team?
+</h3>
+<ul>
+  <a href="{% url 'match:team_inviting_team' prospective_team.username 'M' %}">Ask if prospective team is also interested.</a>
+</ul>  
+{% endif %}
+
+{% if team_can_invite_t2m %}
+<h3>
+  Interested in being mentored by this team?
+</h3>
+<ul>
+  <a href="{% url 'match:team_inviting_team' prospective_team.username 'H' %}">Ask if prospective team is also interested.</a>
 </ul>  
 {% endif %}
 
