@@ -125,15 +125,18 @@ def person_profile(request):
 
 
 def person_viewing_team(request, tusername):
-    pusername = request.user.username
-    person = request.user.profile.get_person()
     prospective_team = get_object_or_404(Team, username=tusername)
-    can_invite = True
-    if Invite.find_identical_pending_invite(pusername, tusername, Invite.P2T):
-        can_invite = False
+    can_invite = False
     too_many_invite = ""
-    if Invite.pending_invite_num(pusername) > max_initiated_invite:
-        too_many_invite = "Person cannot invite prospective teams at this time as you have exceeeded the maximum of %d pending invites; invites expire within %d days" % (max_initiated_invite, invite_expiration_in_days)
+    if request.user.is_authenticated:
+        pusername = request.user.username
+        person = request.user.profile.get_person()
+        can_invite = True
+        if Invite.find_identical_pending_invite(pusername, tusername, Invite.P2T):
+            can_invite = False
+        elif Invite.pending_invite_num(pusername) > max_initiated_invite:
+            can_invite = False
+            too_many_invite = "Person cannot invite prospective teams at this time as you have exceeeded the maximum of %d pending invites; invites expire within %d days" % (max_initiated_invite, invite_expiration_in_days)
     return render(request, 'match/viewing_team.html', {
         'prospective_team' : prospective_team, 'person_can_invite' : can_invite,
         'too_many_invite' : too_many_invite })
